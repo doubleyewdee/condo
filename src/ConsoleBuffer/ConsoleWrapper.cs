@@ -1,14 +1,27 @@
 ﻿namespace ConsoleBuffer
 {
     using System;
+    using System.ComponentModel;
     using System.IO;
     using System.Runtime.InteropServices;
     using System.Threading.Tasks;
     using Microsoft.Win32.SafeHandles;
 
-    public sealed class ConsoleWrapper : IDisposable
+    public sealed class ConsoleWrapper : IDisposable, INotifyPropertyChanged
     {
-        public string Contents { get; private set; }
+        private string contents;
+        public string Contents
+        {
+            get
+            {
+                return this.contents;
+            }
+            set
+            {
+                this.contents = value;
+                this.OnPropertyChanged(nameof(Contents));
+            }
+        }
 
         public string Command { get; private set; }
 
@@ -134,19 +147,34 @@
                 throw new InvalidOperationException($"{exceptionMessage}: {Marshal.GetHRForLastWin32Error()}");
         }
 
-        #region IDisposable Support
+        #region INotifyPropertyChanged
+        public event PropertyChangedEventHandler PropertyChanged;
+        public void OnPropertyChanged(string name)
+        {
+            this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+        #endregion
+
+        #region IDisposable
         private bool disposed = false; // To detect redundant calls
 
         void Dispose(bool disposing)
         {
             if (!this.disposed)
             {
-                this.disposed = true;
+                if (disposing)
+                {
+                    this.readHandle?.Dispose();
+                    this.readHandle = null;
+                    this.writeHandle?.Dispose();
+                    this.writeHandle = null;
+                }
 
-                // We want to clear out managed resources first to allow our reader task to die naturally from having the other side of its
-                // pipe closed.
                 if (this.processInfo.hProcess != IntPtr.Zero)
                 {
+                    // XXX: maybe don't?
+                    NativeMethods.TerminateProcess(this.processInfo.hProcess, uint.MaxValue);
+
                     NativeMethods.CloseHandle(this.processInfo.hProcess);
                     this.processInfo.hProcess = IntPtr.Zero;
                 }
@@ -169,13 +197,7 @@
                     this.startupInfo.lpAttributeList = IntPtr.Zero;
                 }
 
-                if (disposing)
-                {
-                    this.readHandle?.Dispose();
-                    this.readHandle = null;
-                    this.writeHandle?.Dispose();
-                    this.writeHandle = null;
-                }
+                this.disposed = true;
             }
         }
 
