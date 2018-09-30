@@ -48,20 +48,30 @@
 
         public ConsoleWrapper(string command)
         {
-            this.Contents = string.Empty;
-
-            if (string.IsNullOrWhiteSpace(command))
+            using (var sr = new StreamWriter(new FileStream(@"c:\users\wd\source\repos\wincon\fuckme.log", FileMode.Create)))
             {
-                throw new ArgumentException("No command specified.", nameof(command));
+                sr.WriteLine($"let's start this shit");
+
+                this.Contents = string.Empty;
+
+                if (string.IsNullOrWhiteSpace(command))
+                {
+                    throw new ArgumentException("No command specified.", nameof(command));
+                }
+
+                this.Command = command;
+                sr.WriteLine($"running {command}");
+
+                this.CreatePTY();
+                sr.WriteLine($"created PTY");
+                this.InitializeStartupInfo();
+                sr.WriteLine($"initialized startup shit");
+                this.StartProcess();
+                sr.WriteLine($"started the fucking process");
+
+                Task.Run(() => this.ReadConsoleTask());
+                sr.WriteLine($"fuck ME");
             }
-
-            this.Command = command;
-
-            this.CreatePTY();
-            this.InitializeStartupInfo();
-            this.StartProcess();
-
-            Task.Run(() => this.ReadConsoleTask());
         }
 
         private void CreatePTY()
@@ -126,7 +136,7 @@
         {
             using (var ptyOutput = new FileStream(this.readHandle, FileAccess.Read))
             {
-                var input = new byte[2048];
+                var input = new byte[32];
 
                 while (true)
                 {
@@ -149,7 +159,7 @@
 
         #region INotifyPropertyChanged
         public event PropertyChangedEventHandler PropertyChanged;
-        public void OnPropertyChanged(string name)
+        private void OnPropertyChanged(string name)
         {
             this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }

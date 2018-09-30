@@ -7,6 +7,6 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        <TextBox Background="Black" Foreground="Gray" Name="stuff" Text="{Binding Content}"/>
+        <TextBox Background="Black" Foreground="Gray" Name="stuff" FontFamily="Consolas" FontSize="14" IsReadOnly="True" />
     </Grid>
 </Window>
