@@ -9,23 +9,14 @@
 
     public sealed class ConsoleWrapper : IDisposable, INotifyPropertyChanged
     {
-        private string contents;
-        public string Contents
-        {
-            get
-            {
-                return this.contents;
-            }
-            set
-            {
-                this.contents = value;
-                this.OnPropertyChanged(nameof(Contents));
-            }
-        }
+        public Buffer Buffer { get; private set; }
 
         public string Command { get; private set; }
 
-        private NativeMethods.COORD consoleSize = new NativeMethods.COORD { X = 25, Y = 80 };
+        public short Width { get { return this.width; } set { this.width = value; } }
+        private short width;
+        public short Height { get { return this.height; } set { this.height = value; } }
+        private short height;
 
         /// <summary>
         /// The handle from which we read data from the console.
@@ -48,30 +39,21 @@
 
         public ConsoleWrapper(string command)
         {
-            using (var sr = new StreamWriter(new FileStream(@"c:\users\wd\source\repos\wincon\fuckme.log", FileMode.Create)))
+            if (string.IsNullOrWhiteSpace(command))
             {
-                sr.WriteLine($"let's start this shit");
-
-                this.Contents = string.Empty;
-
-                if (string.IsNullOrWhiteSpace(command))
-                {
-                    throw new ArgumentException("No command specified.", nameof(command));
-                }
-
-                this.Command = command;
-                sr.WriteLine($"running {command}");
-
-                this.CreatePTY();
-                sr.WriteLine($"created PTY");
-                this.InitializeStartupInfo();
-                sr.WriteLine($"initialized startup shit");
-                this.StartProcess();
-                sr.WriteLine($"started the fucking process");
-
-                Task.Run(() => this.ReadConsoleTask());
-                sr.WriteLine($"fuck ME");
+                throw new ArgumentException("No command specified.", nameof(command));
             }
+
+            this.Command = command;
+            this.Height = 25;
+            this.Width = 80;
+            this.Buffer = new Buffer(this.Width, this.Height);
+
+            this.CreatePTY();
+            this.InitializeStartupInfo();
+            this.StartProcess();
+
+            Task.Run(() => this.ReadConsoleTask());
         }
 
         private void CreatePTY()
@@ -81,7 +63,8 @@
             if (   NativeMethods.CreatePipe(out pipeTTYin, out this.writeHandle, IntPtr.Zero, 0)
                 && NativeMethods.CreatePipe(out this.readHandle, out pipeTTYout, IntPtr.Zero, 0))
             {
-                ThrowForHResult(NativeMethods.CreatePseudoConsole(this.consoleSize, pipeTTYin, pipeTTYout, 0, out this.consoleHandle),
+                ThrowForHResult(NativeMethods.CreatePseudoConsole(new NativeMethods.COORD { X = this.Width, Y = this.Height },
+                                                                  pipeTTYin, pipeTTYout, 0, out this.consoleHandle),
                                 "Failed to create PTY");
 
                 // It is safe to close these as they have been duped to the child console host and will be closed on that end.
@@ -136,7 +119,7 @@
         {
             using (var ptyOutput = new FileStream(this.readHandle, FileAccess.Read))
             {
-                var input = new byte[32];
+                var input = new byte[2048];
 
                 while (true)
                 {
@@ -145,9 +128,27 @@
                         return;
                     }
 
+                    Logger.Verbose("reading ...");
                     var read = ptyOutput.Read(input, 0, input.Length);
-                    this.Contents += System.Text.Encoding.UTF8.GetString(input, 0, read);
+                    Logger.Verbose("appending ...");
+                    this.Buffer.Append(input, read);
+                    Logger.Verbose("notifying ...");
+                    this.OnPropertyChanged(nameof(this.Buffer));
+                    Logger.Verbose("notified!");
                 }
+            }
+        }
+
+        private void UpdateDimensions(short newHeight, short newWidth)
+        {
+            if (newHeight <= 0) throw new ArgumentOutOfRangeException(nameof(newHeight));
+            if (newWidth <= 0) throw new ArgumentOutOfRangeException(nameof(newWidth));
+
+            if (this.consoleHandle != IntPtr.Zero && (newHeight != this.Height || newWidth != this.Width))
+            {
+                this.height = newHeight;
+                this.width = newWidth;
+                NativeMethods.ResizePseudoConsole(this.consoleHandle, new NativeMethods.COORD { X = this.Width, Y = this.Height });
             }
         }
 
