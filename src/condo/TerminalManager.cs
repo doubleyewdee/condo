@@ -21,10 +21,9 @@
 
         public ConsoleWrapper GetOrCreate(int id, string command)
         {
-            ConsoleWrapper con;
             lock (this.terminalLock)
             {
-                if (this.terminals.TryGetValue(id, out con))
+                if (this.terminals.TryGetValue(id, out ConsoleWrapper con))
                 {
                     return con;
                 }

@@ -12,7 +12,7 @@
 
         private Logger()
         {
-            this.writer = new StreamWriter(@"C:\Users\wd\Source\Repos\wincon\wincon.log", true, Encoding.UTF8);
+            this.writer = new StreamWriter(@"C:\Users\wd\Source\Repos\wincon\wincon.log", false, Encoding.UTF8);
         }
 
         private void Write(string msg)

@@ -42,5 +42,15 @@ namespace ConsoleBuffer
         {
             return chars.GetEnumerator();
         }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder(this.chars.Count);
+            foreach (var c in this.chars)
+            {
+                sb.Append(c.Glyph);
+            }
+            return sb.ToString();
+        }
     }
 }

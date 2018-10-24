@@ -11,6 +11,23 @@
         private readonly List<Line> lines = new List<Line>();
         private readonly object renderLock = new object();
 
+        public (short X, short Y) CursorPosition { get; private set; }
+
+        private short bufferTopVisibleLine
+        {
+            get
+            {
+                return (short)Math.Max(0, this.lines.Count - this.Height);
+            }
+        }
+        private short currentLine
+        {
+            get
+            {
+                return (short)(this.bufferTopVisibleLine + this.CursorPosition.Y);
+            }
+        }
+
         public short Width { get; set; }
         public short Height { get; set; }
 
@@ -25,24 +42,21 @@
         {
             lock (this.renderLock)
             {
-                int currentLine = this.lines.Count - 1;
                 foreach (char ch in Encoding.UTF8.GetString(bytes, 0, length))
                 {
-                    if (ch == '\n' || this.lines[currentLine].Length == this.Width)
+                    if (ch == '\n')
                     {
-                        if (currentLine == this.lines.Count - 1)
+                        Logger.Verbose($"newline (current: {this.lines[this.currentLine]}!");
+                        if (this.currentLine == this.lines.Count - 1)
                         {
                             this.lines.Add(new Line());
-                            ++currentLine;
                         }
 
-                        if (ch == '\n')
-                            continue;
+                        this.CursorPosition = (X: this.CursorPosition.X, Y: (short)Math.Min(this.Height - 1, this.CursorPosition.Y + 1));
                     }
 
-                    this.lines[currentLine].Append(new Character { Glyph = ch });
-                    if (ch == ' ')
-                        Logger.Verbose("space!");
+                    this.lines[this.currentLine].Append(new Character { Glyph = ch });
+                    this.CursorPosition = (X: (short)Math.Min(this.Width - 1, this.CursorPosition.X + 1), this.CursorPosition.Y);
                 }
             }
         }
@@ -54,10 +68,9 @@
         {
             lock (this.renderLock)
             {
-                var startLine = Math.Max(0, this.lines.Count - this.Height);
                 for (var x = 0; x < this.Height; ++x)
                 {
-                    var renderLine = startLine + x;
+                    var renderLine = this.bufferTopVisibleLine + x;
                     var line = renderLine < this.lines.Count ? this.lines[renderLine] : Line.Empty;
                     short y = 0;
                     foreach (var c in line)
@@ -65,7 +78,7 @@
                         target.RenderCharacter(c, x, y);
                         ++y;
                     }
-                    while (y < this.Width - 1)
+                    while (y < this.Width)
                     {
                         target.RenderCharacter(new Character { Glyph = ' ' }, x, y);
                         ++y;
