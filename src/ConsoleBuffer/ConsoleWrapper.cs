@@ -130,7 +130,9 @@
                     {
                         Logger.Verbose("reading ...");
                         var read = ptyOutput.Read(input, 0, input.Length);
-                        Logger.Verbose("appending ...");
+                        if (read == 0) continue;
+
+                        Logger.Verbose($"appending {read} bytes...");
                         this.Buffer.Append(input, read);
                         Logger.Verbose("notifying ...");
                         this.OnPropertyChanged(nameof(this.Buffer));

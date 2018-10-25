@@ -44,8 +44,9 @@
         {
             lock (this.renderLock)
             {
-                foreach (char ch in Encoding.UTF8.GetString(bytes, 0, length))
+                for (var i = 0;i < length; ++i)
                 {
+                    var ch = (char)bytes[i];
                     if (ch == '\n')
                     {
                         Logger.Verbose($"newline (current: {this.lines[this.currentLine]})");
