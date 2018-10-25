@@ -15,22 +15,26 @@ namespace ConsoleBuffer
         public int Length => this.chars.Count;
 
         /// <summary>
-        /// Throw another character on to the end of the line.
-        /// </summary>
-        /// <param name="ch"></param>
-        public void Append(Character ch)
-        {
-            this.chars.Add(ch);
-        }
-
-        /// <summary>
         /// Set a character value at a specified position. If the line is not long enough it is extended with blanks.
         /// </summary>
         /// <param name="pos">Position to set.</param>
         /// <param name="ch">Character value.</param>
         public void Set(int pos, Character ch)
         {
-            throw new NotImplementedException();
+            if (this.chars.Count <= pos)
+            {
+                this.Extend(pos);
+            }
+            this.chars[pos] = ch;
+        }
+
+        private void Extend(int pos)
+        {
+            // XXX: not efficient.
+            while (this.chars.Count <= pos)
+            {
+                this.chars.Add(new Character { Glyph = ' ' });
+            }
         }
 
         public IEnumerator<Character> GetEnumerator()

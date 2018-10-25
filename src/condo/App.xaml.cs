@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -18,6 +19,11 @@ namespace condo
         {
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+
+            // XXX: this is some garbage. tasks are a pain.
+#if DEBUG
+            new Timer((_) => GC.Collect(2, GCCollectionMode.Forced, true, true), null, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
+#endif
         }
 
         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)

@@ -13,10 +13,8 @@
 
         public string Command { get; private set; }
 
-        public short Width { get { return this.width; } set { this.width = value; } }
-        private short width;
-        public short Height { get { return this.height; } set { this.height = value; } }
-        private short height;
+        public short Width { get; set; }
+        public short Height { get; set; }
 
         /// <summary>
         /// The handle from which we read data from the console.
@@ -128,13 +126,21 @@
                         return;
                     }
 
-                    Logger.Verbose("reading ...");
-                    var read = ptyOutput.Read(input, 0, input.Length);
-                    Logger.Verbose("appending ...");
-                    this.Buffer.Append(input, read);
-                    Logger.Verbose("notifying ...");
-                    this.OnPropertyChanged(nameof(this.Buffer));
-                    Logger.Verbose("notified!");
+                    try
+                    {
+                        Logger.Verbose("reading ...");
+                        var read = ptyOutput.Read(input, 0, input.Length);
+                        Logger.Verbose("appending ...");
+                        this.Buffer.Append(input, read);
+                        Logger.Verbose("notifying ...");
+                        this.OnPropertyChanged(nameof(this.Buffer));
+                        Logger.Verbose("notified!");
+                    }
+                    catch (Exception ex) // XXX: this is so fucking annoying that I have to do this.
+                    {
+                        Logger.Verbose(ex.ToString());
+                        throw;
+                    }
                 }
             }
         }
@@ -146,8 +152,8 @@
 
             if (this.consoleHandle != IntPtr.Zero && (newHeight != this.Height || newWidth != this.Width))
             {
-                this.height = newHeight;
-                this.width = newWidth;
+                this.Height = newHeight;
+                this.Width = newWidth;
                 NativeMethods.ResizePseudoConsole(this.consoleHandle, new NativeMethods.COORD { X = this.Width, Y = this.Height });
             }
         }

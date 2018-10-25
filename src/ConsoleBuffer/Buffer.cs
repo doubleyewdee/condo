@@ -11,7 +11,9 @@
         private readonly List<Line> lines = new List<Line>();
         private readonly object renderLock = new object();
 
-        public (short X, short Y) CursorPosition { get; private set; }
+        private short cursorX;
+        private short cursorY;
+        public (short X, short Y) CursorPosition => (this.cursorX, this.cursorY);
 
         private short bufferTopVisibleLine
         {
@@ -46,17 +48,22 @@
                 {
                     if (ch == '\n')
                     {
-                        Logger.Verbose($"newline (current: {this.lines[this.currentLine]}!");
+                        Logger.Verbose($"newline (current: {this.lines[this.currentLine]})");
                         if (this.currentLine == this.lines.Count - 1)
                         {
                             this.lines.Add(new Line());
                         }
 
-                        this.CursorPosition = (X: this.CursorPosition.X, Y: (short)Math.Min(this.Height - 1, this.CursorPosition.Y + 1));
+                        this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
+                    }
+                    else if (ch == '\r')
+                    {
+                        Logger.Verbose($"carriage return");
+                        this.cursorX = 0;
                     }
 
-                    this.lines[this.currentLine].Append(new Character { Glyph = ch });
-                    this.CursorPosition = (X: (short)Math.Min(this.Width - 1, this.CursorPosition.X + 1), this.CursorPosition.Y);
+                    this.lines[this.currentLine].Set(this.cursorX, new Character { Glyph = ch });
+                    this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + 1);
                 }
             }
         }

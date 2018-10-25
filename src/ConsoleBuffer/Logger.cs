@@ -12,7 +12,8 @@
 
         private Logger()
         {
-            this.writer = new StreamWriter(@"C:\Users\wd\Source\Repos\wincon\wincon.log", false, Encoding.UTF8);
+            var logfile = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), @"Source\Repos\wincon\wincon.log");
+            this.writer = new StreamWriter(logfile, false, Encoding.UTF8);
         }
 
         private void Write(string msg)
