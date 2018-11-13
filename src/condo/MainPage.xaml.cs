@@ -22,16 +22,12 @@
             this.InitializeComponent();
 
             this.Loaded += this.OnLoaded;
-
-            this.console = TerminalManager.Instance.GetOrCreate(0, "ping -t localhost");
-            this.characters = new ConsoleBuffer.Character[this.console.Height, this.console.Width];
-            //System.Diagnostics.Debugger.Launch();
         }
 
         private void UpdateContents(object sender, PropertyChangedEventArgs args)
         {
-            this.console.Buffer.Render(this);
-            this.Dispatcher.TryRunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => this.Redraw());
+            //this.console.Buffer.Render(this);
+            //this.Dispatcher.TryRunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => this.Redraw());
         }
 
         private Size DetermineSize()
@@ -43,10 +39,15 @@
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            this.console = TerminalManager.Instance.GetOrCreate(0, "ping -t localhost");
+            this.characters = new ConsoleBuffer.Character[this.console.Height, this.console.Width];
+            //System.Diagnostics.Debugger.Launch();
+
             var stuffSize = this.DetermineSize();
             this.stuff.Height = stuffSize.Height;
             this.stuff.Width = stuffSize.Width;
             this.console.PropertyChanged += this.UpdateContents;
+            this.stuff.Text = "28721398283";
         }
 
         private void Redraw()
