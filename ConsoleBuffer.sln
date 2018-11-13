@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.28010.2036
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleBuffer", "src\ConsoleBuffer\ConsoleBuffer.csproj", "{A16D11B0-4785-434F-8514-ABCC16DDFBFD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "condo", "src\condo\condo.csproj", "{D890EB09-11B9-41A8-B9A7-C1D159312A32}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "condo.wpf", "src\condo.wpf\condo.wpf.csproj", "{D890EB09-11B9-41A8-B9A7-C1D159312A32}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -13,6 +13,7 @@
 
         private short cursorX;
         private short cursorY;
+        private int currentChar;
         public (short X, short Y) CursorPosition => (this.cursorX, this.cursorY);
 
         private short bufferTopVisibleLine
@@ -46,8 +47,9 @@
             {
                 for (var i = 0;i < length; ++i)
                 {
-                    var ch = (char)bytes[i];
-                    if (ch == '\n')
+                    if (!this.AppendChar(bytes[i])) continue;
+
+                    if (this.currentChar == '\n')
                     {
                         Logger.Verbose($"newline (current: {this.lines[this.currentLine]})");
                         if (this.currentLine == this.lines.Count - 1)
@@ -57,16 +59,27 @@
 
                         this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
                     }
-                    else if (ch == '\r')
+                    else if (this.currentChar == '\r')
                     {
                         Logger.Verbose($"carriage return");
                         this.cursorX = 0;
                     }
 
-                    this.lines[this.currentLine].Set(this.cursorX, new Character { Glyph = ch });
+                    this.lines[this.currentLine].Set(this.cursorX, new Character { Glyph = this.currentChar });
                     this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + 1);
                 }
             }
+        }
+
+        /// <summary>
+        /// Append a single byte to the current character.
+        /// </summary>
+        /// <returns>true if the current character represents a completed Unicode character</returns>
+        private bool AppendChar(byte b)
+        {
+            // TODO: actual utf-8 parsing.
+            this.currentChar = b;
+            return true;
         }
 
         /// <summary>

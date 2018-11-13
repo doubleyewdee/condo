@@ -1,12 +1,8 @@
 ﻿namespace condo
 {
-    using System;
     using System.ComponentModel;
     using System.Globalization;
-    using System.IO;
     using System.Text;
-    using System.Threading;
-    using System.Threading.Tasks;
     using System.Windows;
     using System.Windows.Media;
 
@@ -26,6 +22,7 @@
             this.Loaded += this.OnLoaded;
 
             this.console = TerminalManager.Instance.GetOrCreate(0, "ping -t localhost");
+            System.Diagnostics.Debugger.Launch();
             this.console.PropertyChanged += this.UpdateContents;
         }
 
@@ -67,7 +64,7 @@
             {
                 for (var y = 0; y < this.console.Width; ++y)
                 {
-                    sb.Append(this.characters[x, y].Glyph);
+                    sb.Append((char)this.characters[x, y].Glyph);
                 }
                 sb.Append('\n');
             }

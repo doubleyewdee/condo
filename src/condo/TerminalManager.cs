@@ -2,7 +2,6 @@
 {
     using ConsoleBuffer;
     using System.Collections.Generic;
-    using System.Threading.Tasks;
 
     /// <summary>
     /// Manages creating/destroying terminals through queued requests.
