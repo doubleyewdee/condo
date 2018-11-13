@@ -24,15 +24,14 @@
             this.Loaded += this.OnLoaded;
 
             this.console = TerminalManager.Instance.GetOrCreate(0, "ping -t localhost");
-            System.Diagnostics.Debugger.Launch();
-            this.stuff.Text = "abjkkas";
-            //this.console.PropertyChanged += this.UpdateContents;
+            this.characters = new ConsoleBuffer.Character[this.console.Height, this.console.Width];
+            //System.Diagnostics.Debugger.Launch();
         }
 
-        private async void UpdateContents(object sender, PropertyChangedEventArgs args)
+        private void UpdateContents(object sender, PropertyChangedEventArgs args)
         {
             this.console.Buffer.Render(this);
-            await this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>  this.Redraw());
+            this.Dispatcher.TryRunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => this.Redraw());
         }
 
         private Size DetermineSize()
@@ -47,9 +46,7 @@
             var stuffSize = this.DetermineSize();
             this.stuff.Height = stuffSize.Height;
             this.stuff.Width = stuffSize.Width;
-
-            this.characters = new ConsoleBuffer.Character[this.console.Height, this.console.Width];
-            this.Redraw();
+            this.console.PropertyChanged += this.UpdateContents;
         }
 
         private void Redraw()
@@ -64,7 +61,7 @@
                 sb.Append('\n');
             }
 
-            this.stuff.Text = sb.ToString();
+            //this.stuff.Text = sb.ToString();
         }
 
         public void RenderCharacter(ConsoleBuffer.Character c, int x, int y)

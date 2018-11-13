@@ -6,14 +6,21 @@
 
     public sealed class Logger
     {
-        private static readonly Logger Instance = new Logger();
+        private static Logger Instance = null;
 
         private readonly StreamWriter writer;
 
-        private Logger()
+        public static void Init(string filename)
         {
-            var logfile = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), @"Source\Repos\wincon\wincon.log");
-            this.writer = new StreamWriter(logfile, false, Encoding.UTF8);
+            if (Instance == null)
+            {
+                Instance = new Logger(filename);
+            }
+        }
+
+        private Logger(string filename)
+        {
+            this.writer = new StreamWriter(filename, false, Encoding.UTF8);
         }
 
         private void Write(string msg)
@@ -27,7 +34,7 @@
 
         public static void Verbose(string msg)
         {
-            Instance.Write(msg);
+            Instance?.Write(msg);
         }
     }
 }

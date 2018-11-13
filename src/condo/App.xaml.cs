@@ -30,6 +30,7 @@ namespace condo
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            ConsoleBuffer.Logger.Init(Path.Combine(Windows.Storage.ApplicationData.Current.LocalFolder.Path, "wincon.log"));
         }
 
         /// <summary>

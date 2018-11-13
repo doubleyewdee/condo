@@ -52,7 +52,7 @@ namespace ConsoleBuffer
             var sb = new StringBuilder(this.chars.Count);
             foreach (var c in this.chars)
             {
-                sb.Append(c.Glyph);
+                sb.Append((char)c.Glyph);
             }
             return sb.ToString();
         }
