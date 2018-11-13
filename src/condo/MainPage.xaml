@@ -9,6 +9,6 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid>
-
+        <TextBox Background="Black" Foreground="Gray" Name="stuff" FontFamily="Consolas" FontSize="14" IsReadOnly="True" />
     </Grid>
 </Page>
