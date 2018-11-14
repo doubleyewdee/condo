@@ -8,6 +8,7 @@
 
     public sealed class Buffer : INotifyPropertyChanged
     {
+        private readonly AnsiParser parser = new AnsiParser();
         private readonly List<Line> lines = new List<Line>();
         private readonly object renderLock = new object();
 
@@ -49,24 +50,18 @@
                 {
                     if (!this.AppendChar(bytes[i])) continue;
 
-                    if (this.currentChar == '\n')
+                    switch (this.parser.Append(this.currentChar))
                     {
-                        Logger.Verbose($"newline (current: {this.lines[this.currentLine]})");
-                        if (this.currentLine == this.lines.Count - 1)
-                        {
-                            this.lines.Add(new Line());
-                        }
-
-                        this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
+                    case ParserAppendResult.Render:
+                        this.lines[this.currentLine].Set(this.cursorX, new Character { Glyph = this.currentChar });
+                        this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + 1);
+                        break;
+                    case ParserAppendResult.Complete:
+                        this.ExecuteParserCommand();
+                        break;
+                    default:
+                        throw new InvalidOperationException("unexpected parser result");
                     }
-                    else if (this.currentChar == '\r')
-                    {
-                        Logger.Verbose($"carriage return");
-                        this.cursorX = 0;
-                    }
-
-                    this.lines[this.currentLine].Set(this.cursorX, new Character { Glyph = this.currentChar });
-                    this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + 1);
                 }
             }
         }
@@ -80,6 +75,26 @@
             // TODO: actual utf-8 parsing.
             this.currentChar = b;
             return true;
+        }
+
+        private void ExecuteParserCommand()
+        {
+            switch (this.parser.CurrentCommand)
+            {
+            case ParserCommand.LF:
+                if (this.currentLine == this.lines.Count - 1)
+                {
+                    this.lines.Add(new Line());
+                }
+
+                this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
+                break;
+            case ParserCommand.CR:
+                this.cursorX = 0;
+                break;
+            default:
+                throw new InvalidOperationException($"Unexpected parser command {this.parser.CurrentCommand}");
+            }
         }
 
         /// <summary>
