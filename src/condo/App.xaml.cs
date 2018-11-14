@@ -1,9 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Windows;
-
-namespace condo
+﻿namespace condo
 {
+    using System;
+    using System.IO;
+    using System.Threading.Tasks;
+    using System.Windows;
+
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
@@ -11,6 +12,7 @@ namespace condo
     {
         public App()
         {
+            ConsoleBuffer.Logger.Init(Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), @"Source\Repos\wincon\wincon.log"));
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
         }

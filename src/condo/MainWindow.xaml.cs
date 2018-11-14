@@ -20,10 +20,7 @@
             InitializeComponent();
 
             this.Loaded += this.OnLoaded;
-
-            this.console = TerminalManager.Instance.GetOrCreate(0, "ping -t localhost");
             System.Diagnostics.Debugger.Launch();
-            this.console.PropertyChanged += this.UpdateContents;
         }
 
         private void UpdateContents(object sender, PropertyChangedEventArgs args)
@@ -48,6 +45,7 @@
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
+            this.console = TerminalManager.Instance.GetOrCreate(0, "ping -t localhost");
 
             var stuffSize = this.DetermineSize();
             this.stuff.Height = stuffSize.Height;
@@ -55,6 +53,7 @@
 
             this.characters = new ConsoleBuffer.Character[this.console.Height, this.console.Width];
             this.Redraw();
+            this.console.PropertyChanged += this.UpdateContents;
         }
 
         private void Redraw()
