@@ -1,5 +1,6 @@
 ﻿namespace condo
 {
+    using System;
     using System.ComponentModel;
     using System.Globalization;
     using System.Text;
@@ -53,7 +54,24 @@
 
             this.characters = new ConsoleBuffer.Character[this.console.Height, this.console.Width];
             this.Redraw();
+
             this.console.PropertyChanged += this.UpdateContents;
+            this.console.Buffer.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == "Title")
+                {
+                    Dispatcher.InvokeAsync(() => this.Title = this.console.Buffer.Title);
+                }
+            };
+
+            this.Closing += HandleClosing;
+        }
+
+        private void HandleClosing(object sender, CancelEventArgs e)
+        {
+            this.console.PropertyChanged -= this.UpdateContents;
+            this.console?.Dispose();
+            this.console = null;
         }
 
         private void Redraw()

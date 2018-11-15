@@ -35,6 +35,8 @@
         public short Width { get; set; }
         public short Height { get; set; }
 
+        public string Title { get; private set; }
+
         public Buffer(short width, short height)
         {
             this.Width = width;
@@ -89,6 +91,13 @@
             {
             case ControlCharacterCommand ctrl:
                 this.HandleControlCharacter(ctrl.Code);
+                break;
+            case OSCommand osCommand:
+                if (osCommand.Command == OSCommand.Type.SetTitle)
+                {
+                    this.Title = osCommand.Title;
+                    this.OnPropertyChanged("Title");
+                }
                 break;
             case UnsupportedCommand unsupported:
                 // XXX: would be nice to log the sequence

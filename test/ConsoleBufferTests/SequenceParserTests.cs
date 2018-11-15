@@ -61,7 +61,10 @@ namespace ConsoleBufferTests
                 Assert.AreEqual(ParserAppendResult.Pending, parser.Append(command[i]));
             }
             Assert.AreEqual(ParserAppendResult.Complete, parser.Append(command[command.Length - 1]));
-            Assert.IsInstanceOfType(parser.Command, typeof(UnsupportedCommand));
+            Assert.IsInstanceOfType(parser.Command, typeof(OSCommand));
+
+            var osCmd = parser.Command as OSCommand;
+            Assert.AreEqual(title, osCmd.Title);
         }
     }
 }

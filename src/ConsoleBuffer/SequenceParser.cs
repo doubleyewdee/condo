@@ -157,12 +157,11 @@
             {
             case '\a':
             case '\0':
-                return this.CompleteCommand(null);
+                return this.CompleteCommand(new OSCommand(this.buffer.ToString()));
             default:
                 this.buffer.Append((char)character); // XXX: nukes astral plane support for giganto unicode characters. care later.
                 return ParserAppendResult.Pending;
             }
-            throw new NotImplementedException();
         }
 
         private ParserAppendResult AppendUntilST(int character)

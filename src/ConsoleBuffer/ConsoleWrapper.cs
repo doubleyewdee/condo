@@ -31,6 +31,8 @@
         /// </summary>
         private IntPtr consoleHandle;
 
+        private Task readTask;
+
         // used for booting / running the underlying process.
         private NativeMethods.STARTUPINFOEX startupInfo;
         private NativeMethods.PROCESS_INFORMATION processInfo;
@@ -51,7 +53,7 @@
             this.InitializeStartupInfo();
             this.StartProcess();
 
-            Task.Run(() => this.ReadConsoleTask());
+            this.readTask = Task.Run(() => this.ReadConsoleTask());
         }
 
         private void CreatePTY()
@@ -119,13 +121,8 @@
             {
                 var input = new byte[2048];
 
-                while (true)
+                while (!this.disposed)
                 {
-                    if (this.disposed)
-                    {
-                        return;
-                    }
-
                     try
                     {
                         Logger.Verbose("reading ...");
@@ -138,7 +135,7 @@
                         this.OnPropertyChanged(nameof(this.Buffer));
                         Logger.Verbose("notified!");
                     }
-                    catch (Exception ex) // XXX: this is so fucking annoying that I have to do this.
+                    catch (Exception ex) // XXX: this is some lousy logging I don't normally recommend, need to kill later.
                     {
                         Logger.Verbose(ex.ToString());
                         throw;
@@ -181,8 +178,14 @@
         {
             if (!this.disposed)
             {
+                this.disposed = true;
+
                 if (disposing)
                 {
+                    this.readTask?.Wait(TimeSpan.FromSeconds(1));
+                    this.readTask?.Dispose();
+                    this.readTask = null;
+
                     this.readHandle?.Dispose();
                     this.readHandle = null;
                     this.writeHandle?.Dispose();
@@ -215,8 +218,6 @@
                     Marshal.FreeHGlobal(this.startupInfo.lpAttributeList);
                     this.startupInfo.lpAttributeList = IntPtr.Zero;
                 }
-
-                this.disposed = true;
             }
         }
 
