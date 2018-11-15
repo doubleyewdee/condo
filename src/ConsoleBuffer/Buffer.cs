@@ -8,7 +8,7 @@
 
     public sealed class Buffer : INotifyPropertyChanged
     {
-        private readonly AnsiParser parser = new AnsiParser();
+        private readonly SequenceParser parser = new SequenceParser();
         private readonly List<Line> lines = new List<Line>();
         private readonly object renderLock = new object();
 

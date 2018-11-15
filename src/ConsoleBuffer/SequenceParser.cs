@@ -36,7 +36,15 @@
         CR,
     }
 
-    sealed class AnsiParser
+    // Notes on the parser:
+    // - I elected to hand-roll this instead of generating a parser. This is primarily for performance purposes.
+    // - The names I've chosen to given to various "areas" of parsing are made up and not based on good research on my
+    //   part.  The areas themselves may be silly/erroneous. Please call me out on my bullshit as desired.
+    // - The parser is not greedy. I have seen parsers which work to varying levels of greed, we will stop on the first
+    //   invalid character for whatever sequence we are in (and not emit that character, nor any preceding). So for
+    //   example the sequence '\e[32[33m hello' will emit an unmodified '33m hello' string as we gave up at the invalid
+    //   '[' character.
+    sealed class SequenceParser
     {
         enum SequenceType
         {
@@ -53,12 +61,13 @@
             /// </summary>
             None,
         }
+
         private SequenceType sequenceType = SequenceType.None;
         private bool inSequence = false;
 
         public ParserCommand CurrentCommand { get; private set; }
 
-        public AnsiParser()
+        public SequenceParser()
         {
         }
 
