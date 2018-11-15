@@ -5,6 +5,7 @@
     using System.Globalization;
     using System.Text;
     using System.Windows;
+    using System.Windows.Input;
     using System.Windows.Media;
 
     /// <summary>
@@ -46,7 +47,7 @@
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
-            this.console = TerminalManager.Instance.GetOrCreate(0, "ping -t localhost");
+            this.console = TerminalManager.Instance.GetOrCreate(0, "cmd.exe");
 
             var stuffSize = this.DetermineSize();
             this.stuff.Height = stuffSize.Height;
@@ -65,6 +66,18 @@
             };
 
             this.Closing += HandleClosing;
+            this.KeyDown += HandleKeyDown;
+        }
+
+        private void HandleKeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+            case Key.Return:
+                this.console.SendKey('\r');
+                this.console.SendKey('\n');
+                break;
+            }
         }
 
         private void HandleClosing(object sender, CancelEventArgs e)

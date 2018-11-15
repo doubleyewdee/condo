@@ -25,13 +25,12 @@
         /// The handle into which we write data to the console.
         /// </summary>
         private SafeFileHandle writeHandle;
+        private FileStream writeStream;
 
         /// <summary>
         /// Handle to the console PTY.
         /// </summary>
         private IntPtr consoleHandle;
-
-        private Task readTask;
 
         // used for booting / running the underlying process.
         private NativeMethods.STARTUPINFOEX startupInfo;
@@ -53,7 +52,14 @@
             this.InitializeStartupInfo();
             this.StartProcess();
 
-            this.readTask = Task.Run(() => this.ReadConsoleTask());
+            Task.Run(() => this.ReadConsoleTask());
+            this.writeStream = new FileStream(this.writeHandle, FileAccess.Write);
+        }
+
+        public void SendKey(char value)
+        {
+            this.writeStream.WriteByte((byte)value);
+            this.writeStream.Flush();
         }
 
         private void CreatePTY()
@@ -131,6 +137,11 @@
                         this.Buffer.Append(input, read);
                         this.OnPropertyChanged(nameof(this.Buffer));
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        // this can happen when our parent disposes, safe to bail out silently.
+                        return;
+                    }
                     catch (Exception ex) // XXX: this is some lousy logging I don't normally recommend, need to kill later.
                     {
                         Logger.Verbose(ex.ToString());
@@ -178,10 +189,6 @@
 
                 if (disposing)
                 {
-                    this.readTask?.Wait(TimeSpan.FromSeconds(1));
-                    this.readTask?.Dispose();
-                    this.readTask = null;
-
                     this.readHandle?.Dispose();
                     this.readHandle = null;
                     this.writeHandle?.Dispose();
