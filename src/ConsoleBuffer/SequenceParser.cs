@@ -27,13 +27,33 @@
     enum ParserCommand
     {
         /// <summary>
-        /// Line-feed (\n)
+        /// Not really a command but a notable character we may wish to specially handle (\0 or '^ ')
         /// </summary>
-        LF = 0,
+        NUL = 0,
         /// <summary>
-        /// Carriage return (\r)
+        /// Beep beep (\a or ^G)
+        /// </summary>
+        BEL,
+        /// <summary>
+        /// Backspace (\b or ^H)
+        /// </summary>
+        BS,
+        /// <summary>
+        /// Carriage return (\r or ^M)
         /// </summary>
         CR,
+        /// <summary>
+        /// Form feed (\f or ^L)
+        /// </summary>
+        FF,
+        /// <summary>
+        /// Line-feed (\n or ^J)
+        /// </summary>
+        LF,
+        /// <summary>
+        /// Horizontal tab (\t or ^I)
+        /// </summary>
+        TAB,
     }
 
     // Notes on the parser:
@@ -78,11 +98,29 @@
             case SequenceType.None:
                 switch (character)
                 {
+                case '\0':
+                    this.CurrentCommand = ParserCommand.NUL;
+                    return ParserAppendResult.Complete;
+                case '\a':
+                    this.CurrentCommand = ParserCommand.BEL;
+                    return ParserAppendResult.Complete;
+                case '\b':
+                    this.CurrentCommand = ParserCommand.BS;
+                    return ParserAppendResult.Complete;
+                case '\f':
+                    this.CurrentCommand = ParserCommand.FF;
+                    return ParserAppendResult.Complete;
                 case '\n':
                     this.CurrentCommand = ParserCommand.LF;
                     return ParserAppendResult.Complete;
                 case '\r':
                     this.CurrentCommand = ParserCommand.CR;
+                    return ParserAppendResult.Complete;
+                case '\t':
+                    this.CurrentCommand = ParserCommand.TAB;
+                    return ParserAppendResult.Complete;
+                case '\v':
+                    this.CurrentCommand = ParserCommand.LF; // XXX: lazily treat these as same
                     return ParserAppendResult.Complete;
                 default:
                     return ParserAppendResult.Render;
