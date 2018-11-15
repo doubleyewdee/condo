@@ -94,6 +94,8 @@
                 return this.AppendNone(character);
             case State.Basic:
                 return this.AppendBasic(character);
+            case State.ControlSequence:
+                return this.AppendControlSequence(character);
             case State.OSCommand:
                 return this.AppendOSCommand(character);
             case State.PrivacyMessage: // these are identical for now as we do not support them.
@@ -137,6 +139,9 @@
         {
             switch (character)
             {
+            case '[':
+                this.state = State.ControlSequence;
+                return ParserAppendResult.Pending;
             case ']':
                 this.state = State.OSCommand;
                 return ParserAppendResult.Pending;
@@ -147,8 +152,22 @@
                 this.state = State.ApplicationProgramCommand;
                 return ParserAppendResult.Pending;
             default:
-                return this.CompleteCommand(null, ParserAppendResult.Invalid);
+                return this.CompleteCommand(new UnsupportedCommand($"^[{(char)character}"), ParserAppendResult.Invalid);
             }
+        }
+
+        private ParserAppendResult AppendControlSequence(int character)
+        {
+            // all character values between 0x20 and 0x3f (inclusive) are considered "non-command" values and can be safely devoured prior
+            // to any other value. that final value is considered the command to execute and can then parse the consumed data for validity.
+            // this is probably documented somewhere although I learned it with experimentation on a couple distinct emulators...
+            if (character >= 0x20 && character <= 0x3f)
+            {
+                this.buffer.Append((char)character);
+                return ParserAppendResult.Pending;
+            }
+
+            return this.CompleteCommand(new UnsupportedCommand($"^[[{this.buffer.ToString()}{(char)character}"));
         }
 
         private ParserAppendResult AppendOSCommand(int character)
@@ -169,7 +188,7 @@
             switch (character)
             {
             case '\0':
-                return this.CompleteCommand(null);
+                return this.CompleteCommand(new UnsupportedCommand("(ASC or PM goo)"));
             default:
                 return ParserAppendResult.Pending;
             }
@@ -177,7 +196,7 @@
 
         private ParserAppendResult CompleteCommand(BaseCommand command, ParserAppendResult result = ParserAppendResult.Complete)
         {
-            this.Command = command ?? new UnsupportedCommand();
+            this.Command = command ?? throw new ArgumentNullException(nameof(command));
             this.state = State.Reset;
             return result;
         }

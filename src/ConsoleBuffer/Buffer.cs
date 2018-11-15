@@ -100,8 +100,6 @@
                 }
                 break;
             case UnsupportedCommand unsupported:
-                // XXX: would be nice to log the sequence
-                Logger.Verbose("Unsupported command provided.");
                 break;
             default:
                 throw new InvalidOperationException("Unknown command type passed.");

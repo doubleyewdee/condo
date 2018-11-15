@@ -12,7 +12,10 @@
 
     public sealed class UnsupportedCommand : BaseCommand
     {
-        public UnsupportedCommand() : base(null) { }
+        internal UnsupportedCommand(string buffer) : base(null)
+        {
+            Logger.Verbose($"Unsupported command: {buffer}");
+        }
         protected override void Parse(string bufferData) { }
     }
 }
