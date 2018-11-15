@@ -1,21 +1,22 @@
 ﻿namespace condo
 {
-    using System;
     using System.ComponentModel;
     using System.Globalization;
     using System.Text;
     using System.Windows;
-    using System.Windows.Input;
     using System.Windows.Media;
+
+    using ConsoleBuffer;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window, ConsoleBuffer.IRenderTarget
+    public partial class MainWindow : Window, IRenderTarget
     {
         private DpiScale dpiInfo;
-        private ConsoleBuffer.ConsoleWrapper console;
-        private ConsoleBuffer.Character[,] characters;
+        private ConsoleWrapper console;
+        private KeyHandler keyHandler;
+        private Character[,] characters;
 
         public MainWindow()
         {
@@ -48,6 +49,7 @@
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
             this.console = TerminalManager.Instance.GetOrCreate(0, "cmd.exe");
+            this.keyHandler = new KeyHandler(this.console);
 
             var stuffSize = this.DetermineSize();
             this.stuff.Height = stuffSize.Height;
@@ -65,19 +67,10 @@
                 }
             };
 
-            this.Closing += HandleClosing;
-            this.KeyDown += HandleKeyDown;
-        }
+            this.KeyDown += this.keyHandler.OnKeyDown;
+            this.TextInput += this.keyHandler.OnTextInput;
 
-        private void HandleKeyDown(object sender, KeyEventArgs e)
-        {
-            switch (e.Key)
-            {
-            case Key.Return:
-                this.console.SendKey('\r');
-                this.console.SendKey('\n');
-                break;
-            }
+            this.Closing += HandleClosing;
         }
 
         private void HandleClosing(object sender, CancelEventArgs e)
@@ -102,7 +95,7 @@
             this.stuff.Text = sb.ToString();
         }
 
-        public void RenderCharacter(ConsoleBuffer.Character c, int x, int y)
+        public void RenderCharacter(Character c, int x, int y)
         {
             this.characters[x, y] = c;
         }

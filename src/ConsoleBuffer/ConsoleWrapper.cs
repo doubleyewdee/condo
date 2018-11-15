@@ -56,9 +56,32 @@
             this.writeStream = new FileStream(this.writeHandle, FileAccess.Write);
         }
 
-        public void SendKey(char value)
+        /// <summary>
+        /// Send the specified bytes through. Note this is not suitable for sending function/arrow/etc keys.
+        /// It is possible to send raw terminal control codes through if desired, also.
+        /// </summary>
+        /// <param name="bytes">Byte(s) to send (utf-8 encoded).</param>
+        /// <param name="alt">The state of the keyboard 'alt' key (true if down).</param>
+        /// <param name="ctrl">The state of the keyboard 'control' key (true if down).</param>
+        public void SendText(byte[] bytes, bool alt = false, bool ctrl = false)
         {
-            this.writeStream.WriteByte((byte)value);
+            if (alt)
+            {
+                this.writeStream.WriteByte(0x1b); // send single ^[
+            }
+
+            if (ctrl && bytes.Length == 1 && (bytes[0] >= 0x40 && bytes[0] <= 0x7f))
+            {
+                // XXX: not sure if this is right tbqh but basically we want to take any 'normal' US-ASCII key associated with ctrl and
+                // shift it down into the control plane (borrowing language here).
+                if (bytes[0] == ' ')
+                    this.writeStream.WriteByte(0x0); // special magic for ctrl+space
+                else
+                    this.writeStream.WriteByte((byte)(bytes[0] & 0x1f));
+                return;
+            }
+
+            this.writeStream.Write(bytes, 0, bytes.Length);
             this.writeStream.Flush();
         }
 
@@ -132,7 +155,8 @@
                     try
                     {
                         var read = ptyOutput.Read(input, 0, input.Length);
-                        if (read == 0) continue;
+                        if (read == 0)
+                            continue;
 
                         this.Buffer.Append(input, read);
                         this.OnPropertyChanged(nameof(this.Buffer));
