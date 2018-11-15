@@ -1,6 +1,9 @@
 ﻿namespace ConsoleBuffer
 {
-    enum ParserAppendResult
+    using System;
+    using System.Text;
+
+    public enum ParserAppendResult
     {
         /// <summary>
         /// Sequence incomplete.
@@ -24,38 +27,6 @@
         None,
     }
 
-    enum ParserCommand
-    {
-        /// <summary>
-        /// Not really a command but a notable character we may wish to specially handle (\0 or '^ ')
-        /// </summary>
-        NUL = 0,
-        /// <summary>
-        /// Beep beep (\a or ^G)
-        /// </summary>
-        BEL,
-        /// <summary>
-        /// Backspace (\b or ^H)
-        /// </summary>
-        BS,
-        /// <summary>
-        /// Carriage return (\r or ^M)
-        /// </summary>
-        CR,
-        /// <summary>
-        /// Form feed (\f or ^L)
-        /// </summary>
-        FF,
-        /// <summary>
-        /// Line-feed (\n or ^J)
-        /// </summary>
-        LF,
-        /// <summary>
-        /// Horizontal tab (\t or ^I)
-        /// </summary>
-        TAB,
-    }
-
     // Notes on the parser:
     // - I elected to hand-roll this instead of generating a parser. This is primarily for performance purposes.
     // - The names I've chosen to given to various "areas" of parsing are made up and not based on good research on my
@@ -64,70 +35,152 @@
     //   invalid character for whatever sequence we are in (and not emit that character, nor any preceding). So for
     //   example the sequence '\e[32[33m hello' will emit an unmodified '33m hello' string as we gave up at the invalid
     //   '[' character.
-    sealed class SequenceParser
+    public sealed class SequenceParser
     {
-        enum SequenceType
+        enum State
         {
             /// <summary>
-            /// Indicates we are in a standard (\033) escape sequence.
+            /// Indicates we are in a standard (\e) escape sequence.
             /// </summary>
-            Standard = 0,
+            Basic = 0,
             /// <summary>
-            /// Indicates we are in an operating system (\033 ]) escape sequence.
+            /// Indicates we are in CSI (\e[...)
+            /// </summary>
+            ControlSequence,
+            /// <summary>
+            /// Indicates we are in an operating system (\e]) escape sequence.
             /// </summary>
             OSCommand,
+            /// <summary>
+            /// Indicates we are in a privacy message (\e^) sequence.
+            /// </summary>
+            PrivacyMessage,
+            /// <summary>
+            /// Indicates we are in an application program command (\e_) sequence.
+            /// </summary>
+            ApplicationProgramCommand,
             /// <summary>
             /// We are not in a sequence.
             /// </summary>
             None,
+            /// <summary>
+            /// We have completed a sequence and should reset at the next append.
+            /// </summary>
+            Reset,
         }
 
-        private SequenceType sequenceType = SequenceType.None;
-        private bool inSequence = false;
+        private State state = State.None;
+        private readonly StringBuilder buffer = new StringBuilder(128);
 
-        public ParserCommand CurrentCommand { get; private set; }
+        /// <summary>
+        /// The current command (may be null if none).
+        /// </summary>
+        public BaseCommand Command { get; private set; }
 
-        public SequenceParser()
-        {
-        }
+        public SequenceParser() { }
 
         public ParserAppendResult Append(int character)
         {
-            switch (this.sequenceType)
+            if (this.state == State.Reset)
             {
-            case SequenceType.None:
-                switch (character)
-                {
-                case '\0':
-                    this.CurrentCommand = ParserCommand.NUL;
-                    return ParserAppendResult.Complete;
-                case '\a':
-                    this.CurrentCommand = ParserCommand.BEL;
-                    return ParserAppendResult.Complete;
-                case '\b':
-                    this.CurrentCommand = ParserCommand.BS;
-                    return ParserAppendResult.Complete;
-                case '\f':
-                    this.CurrentCommand = ParserCommand.FF;
-                    return ParserAppendResult.Complete;
-                case '\n':
-                    this.CurrentCommand = ParserCommand.LF;
-                    return ParserAppendResult.Complete;
-                case '\r':
-                    this.CurrentCommand = ParserCommand.CR;
-                    return ParserAppendResult.Complete;
-                case '\t':
-                    this.CurrentCommand = ParserCommand.TAB;
-                    return ParserAppendResult.Complete;
-                case '\v':
-                    this.CurrentCommand = ParserCommand.LF; // XXX: lazily treat these as same
-                    return ParserAppendResult.Complete;
-                default:
-                    return ParserAppendResult.Render;
-                }
+                this.state = State.None;
+                this.Command = null;
+                this.buffer.Clear();
             }
 
-            return ParserAppendResult.None; // should be unreachable.
+            switch (this.state)
+            {
+            case State.None:
+                return this.AppendNone(character);
+            case State.Basic:
+                return this.AppendBasic(character);
+            case State.OSCommand:
+                return this.AppendOSCommand(character);
+            case State.PrivacyMessage: // these are identical for now as we do not support them.
+            case State.ApplicationProgramCommand:
+                return this.AppendUntilST(character);
+            default:
+                throw new InvalidOperationException("Invalid parser state.");
+            }
+        }
+
+        private ParserAppendResult AppendNone(int character)
+        {
+            switch (character)
+            {
+            case '\0':
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.NUL));
+            case '\a':
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.BEL));
+            case '\b':
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.BS));
+            case '\f':
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.FF));
+            case '\n':
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.LF));
+            case '\r':
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.CR));
+            case '\t':
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.TAB));
+            case '\v':
+                // NB: old timey tech sure was funny. vertical tabs. ha ha ha.
+                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.LF));
+            case 0x1b: // ^[ / escape
+                this.state = State.Basic;
+                return ParserAppendResult.Pending;
+            default:
+                return ParserAppendResult.Render;
+            }
+        }
+
+        private ParserAppendResult AppendBasic(int character)
+        {
+            switch (character)
+            {
+            case ']':
+                this.state = State.OSCommand;
+                return ParserAppendResult.Pending;
+            case '^':
+                this.state = State.PrivacyMessage;
+                return ParserAppendResult.Pending;
+            case '_':
+                this.state = State.ApplicationProgramCommand;
+                return ParserAppendResult.Pending;
+            default:
+                return this.CompleteCommand(null, ParserAppendResult.Invalid);
+            }
+        }
+
+        private ParserAppendResult AppendOSCommand(int character)
+        {
+            switch (character)
+            {
+            case '\a':
+            case '\0':
+                return this.CompleteCommand(null);
+            default:
+                this.buffer.Append((char)character); // XXX: nukes astral plane support for giganto unicode characters. care later.
+                return ParserAppendResult.Pending;
+            }
+            throw new NotImplementedException();
+        }
+
+        private ParserAppendResult AppendUntilST(int character)
+        {
+            switch (character)
+            {
+            case '\0':
+                return this.CompleteCommand(null);
+            default:
+                return ParserAppendResult.Pending;
+            }
+        }
+
+        private ParserAppendResult CompleteCommand(BaseCommand command, ParserAppendResult result = ParserAppendResult.Complete)
+        {
+            this.Command = command ?? new UnsupportedCommand();
+            this.state = State.Reset;
+            return result;
         }
     }
 }

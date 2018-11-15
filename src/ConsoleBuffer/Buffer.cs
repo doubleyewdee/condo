@@ -59,6 +59,12 @@
                     case ParserAppendResult.Complete:
                         this.ExecuteParserCommand();
                         break;
+                    case ParserAppendResult.Pending:
+                        break;
+                    case ParserAppendResult.Invalid:
+                        // XXX: we should keep a trailing history of received bytes or something so we can actually log meaningful data.
+                        Logger.Verbose("Invalid command sequence in parser.");
+                        break;
                     default:
                         throw new InvalidOperationException("unexpected parser result");
                     }
@@ -79,9 +85,38 @@
 
         private void ExecuteParserCommand()
         {
-            switch (this.parser.CurrentCommand)
+            switch (this.parser.Command)
             {
-            case ParserCommand.LF:
+            case ControlCharacterCommand ctrl:
+                this.HandleControlCharacter(ctrl.Code);
+                break;
+            case UnsupportedCommand unsupported:
+                // XXX: would be nice to log the sequence
+                Logger.Verbose("Unsupported command provided.");
+                break;
+            default:
+                throw new InvalidOperationException("Unknown command type passed.");
+            }
+        }
+
+        private void HandleControlCharacter(ControlCharacterCommand.ControlCode code)
+        {
+            switch (code)
+            {
+            case ControlCharacterCommand.ControlCode.NUL:
+                // XXX: do we want to print these in some magic way? it seems like most terminals just discard these characters when received.
+                break;
+            case ControlCharacterCommand.ControlCode.BEL:
+                // XXX: need to raise a beep event.
+                break;
+            case ControlCharacterCommand.ControlCode.BS:
+                this.cursorX = (short)Math.Max(0, this.cursorX - 1);
+                break;
+            case ControlCharacterCommand.ControlCode.CR:
+                this.cursorX = 0;
+                break;
+            case ControlCharacterCommand.ControlCode.FF: // NB: could clear screen with this if we were so inclined. apparently xterm treats this as LF though, let's emulate.
+            case ControlCharacterCommand.ControlCode.LF:
                 if (this.currentLine == this.lines.Count - 1)
                 {
                     this.lines.Add(new Line());
@@ -89,11 +124,14 @@
 
                 this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
                 break;
-            case ParserCommand.CR:
-                this.cursorX = 0;
+            case ControlCharacterCommand.ControlCode.TAB:
+                // XXX: we don't handle commands to set tab stops yet but I guess need to do so at some point!
+                this.cursorX = (short)Math.Max(this.Width - 1, (this.cursorX + 8 - (this.cursorX % 8)));
                 break;
             default:
-                throw new InvalidOperationException($"Unexpected parser command {this.parser.CurrentCommand}");
+                // XXX: should log the sequence.
+                Logger.Verbose("Encountered unsupported sequence.");
+                break;
             }
         }
 
