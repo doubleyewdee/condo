@@ -20,7 +20,7 @@
 
         public MainWindow()
         {
-            InitializeComponent();
+            this.InitializeComponent();
 
             this.Loaded += this.OnLoaded;
             System.Diagnostics.Debugger.Launch();
@@ -29,7 +29,7 @@
         private void UpdateContents(object sender, PropertyChangedEventArgs args)
         {
             this.console.Buffer.Render(this);
-            Dispatcher.InvokeAsync(() =>  this.Redraw());
+            this.Dispatcher.InvokeAsync(() =>  this.Redraw());
         }
 
         private Size DetermineSize()
@@ -55,7 +55,7 @@
             this.stuff.Height = stuffSize.Height;
             this.stuff.Width = stuffSize.Width;
 
-            this.characters = new ConsoleBuffer.Character[this.console.Height, this.console.Width];
+            this.characters = new Character[this.console.Height, this.console.Width];
             this.Redraw();
 
             this.console.PropertyChanged += this.UpdateContents;
@@ -63,14 +63,14 @@
             {
                 if (args.PropertyName == "Title")
                 {
-                    Dispatcher.InvokeAsync(() => this.Title = this.console.Buffer.Title);
+                    this.Dispatcher.InvokeAsync(() => this.Title = this.console.Buffer.Title);
                 }
             };
 
             this.KeyDown += this.keyHandler.OnKeyDown;
             this.TextInput += this.keyHandler.OnTextInput;
 
-            this.Closing += HandleClosing;
+            this.Closing += this.HandleClosing;
         }
 
         private void HandleClosing(object sender, CancelEventArgs e)

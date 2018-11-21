@@ -9,7 +9,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "condo", "src\condo\condo.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "condo.uwp", "src\condo.uwp\condo.uwp.csproj", "{FB9FD3E5-EDF1-4924-8945-42DC0AFE478F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleBufferTests", "test\ConsoleBufferTests\ConsoleBufferTests.csproj", "{D11953E5-195F-43F4-9109-DE93CED6D016}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleBufferTests", "test\ConsoleBufferTests\ConsoleBufferTests.csproj", "{D11953E5-195F-43F4-9109-DE93CED6D016}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F3383E1A-F55C-405B-91BD-00C11E285D2D}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
