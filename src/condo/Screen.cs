@@ -1,12 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Windows;
-using System.Windows.Media;
-
-namespace condo
+﻿namespace condo
 {
-    public sealed class Screen : FrameworkElement
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Diagnostics;
+    using System.Threading;
+    using System.Windows;
+    using System.Windows.Media;
+    using System.Windows.Threading;
+    using ConsoleBuffer;
+
+    public sealed class Screen : FrameworkElement, IRenderTarget
     {
+        public ConsoleWrapper Console { get; }
+
         private VisualCollection cells;
         private DpiScale dpiInfo;
         private readonly GlyphTypeface typeface;
@@ -15,27 +22,64 @@ namespace condo
         private readonly Point baselineOrigin;
         private readonly Rect cellRectangle;
         private int horizontalCells, verticalCells;
+        private Character[,] characters;
+        private volatile int shouldRedraw;
 
-        public Screen() : this(80, 25) { }
+        private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(10);
+        private readonly Stopwatch redrawWatch = new Stopwatch();
+        private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(200);
+        private readonly Stopwatch cursorBlinkWatch = new Stopwatch();
 
-        public Screen(int width, int height)
+        public Screen(ConsoleWrapper console)
         {
+            this.dpiInfo = VisualTreeHelper.GetDpi(this);
             this.cells = new VisualCollection(this);
             if (!new Typeface("Consolas").TryGetGlyphTypeface(out this.typeface))
             {
                 throw new InvalidOperationException("Could not get desired font.");
             }
 
-            this.horizontalCells = width;
-            this.verticalCells = height;
+            this.Console = console;
+            this.horizontalCells = console.Width;
+            this.verticalCells = console.Height;
+            this.characters = new Character[this.Console.Width, this.Console.Height];
 
             this.cellWidth = this.typeface.AdvanceWidths[0] * this.fontSize;
             this.cellHeight = this.typeface.Height * this.fontSize;
             this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSize);
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
 
-            this.dpiInfo = VisualTreeHelper.GetDpi(this);
+            this.Console.PropertyChanged += this.UpdateContents;
+            this.redrawWatch.Start();
+            this.cursorBlinkWatch.Start();
+
             this.Resize();
+            CompositionTarget.Rendering += this.RenderFrame;
+        }
+
+        bool cursorBlunk;
+        private void RenderFrame(object sender, EventArgs e)
+        {
+            if (this.redrawWatch.Elapsed >= MaxRedrawFrequency && this.shouldRedraw != 0)
+            {
+                this.shouldRedraw = 0;
+                this.Console.Buffer.Render(this);
+                this.Redraw();
+                this.redrawWatch.Restart();
+            }
+
+            if (this.cursorBlinkWatch.Elapsed >= BlinkFrequency)
+            {
+                (var x, var y) = this.Console.Buffer.CursorPosition;
+                this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph, this.cursorBlunk);
+                this.cursorBlunk = !this.cursorBlunk;
+                this.cursorBlinkWatch.Restart();
+            }
+        }
+
+        public void Close()
+        {
+            this.Console.PropertyChanged -= this.UpdateContents;
         }
 
         protected override int VisualChildrenCount => this.cells.Count;
@@ -48,6 +92,11 @@ namespace condo
         protected override Size MeasureOverride(Size availableSize)
         {
             return new Size(this.cellWidth * this.horizontalCells, this.cellHeight * this.verticalCells);
+        }
+
+        private void UpdateContents(object sender, PropertyChangedEventArgs args)
+        {
+            this.shouldRedraw = 1;
         }
 
         private void Resize()
@@ -72,7 +121,7 @@ namespace condo
             return this.cells[x + y * this.horizontalCells] as DrawingVisual;
         }
 
-        public void SetCellCharacter(int x, int y, char c)
+        public void SetCellCharacter(int x, int y, char c, bool invert = false)
         {
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
@@ -88,8 +137,24 @@ namespace condo
                         this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
                 }
 
-                dc.DrawRectangle(Brushes.Black, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
-                dc.DrawGlyphRun(Brushes.Gray, gr);
+                dc.DrawRectangle(!invert ? Brushes.Black : Brushes.Gray, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
+                dc.DrawGlyphRun(!invert ? Brushes.Gray : Brushes.Black, gr);
+            }
+        }
+
+        public void RenderCharacter(Character c, int x, int y)
+        {
+            this.characters[x, y] = c;
+        }
+
+        private void Redraw()
+        {
+            for (var x = 0; x < this.Console.Width; ++x)
+            {
+                for (var y = 0; y < this.Console.Height; ++y)
+                {
+                    this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph);
+                }
             }
         }
     }

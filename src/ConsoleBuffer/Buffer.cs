@@ -16,6 +16,8 @@
         private short cursorY;
         private int currentChar;
         public (short X, short Y) CursorPosition => (this.cursorX, this.cursorY);
+        public bool CursorVisible { get; private set; }
+        public bool CursorBlink { get; private set; }
 
         private short bufferTopVisibleLine
         {
@@ -41,6 +43,7 @@
         {
             this.Width = width;
             this.Height = height;
+            this.CursorVisible = this.CursorBlink = true;
             this.lines.PushBack(new Line());
         }
 
