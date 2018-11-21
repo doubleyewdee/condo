@@ -9,7 +9,7 @@
     public sealed class Buffer : INotifyPropertyChanged
     {
         private readonly SequenceParser parser = new SequenceParser();
-        private readonly List<Line> lines = new List<Line>();
+        private readonly CircularBuffer<Line> lines = new CircularBuffer<Line>(short.MaxValue);
         private readonly object renderLock = new object();
 
         private short cursorX;
@@ -21,7 +21,7 @@
         {
             get
             {
-                return (short)Math.Max(0, this.lines.Count - this.Height);
+                return (short)Math.Max(0, this.lines.Size - this.Height);
             }
         }
         private short currentLine
@@ -41,7 +41,7 @@
         {
             this.Width = width;
             this.Height = height;
-            this.lines.Add(new Line());
+            this.lines.PushBack(new Line());
         }
 
         public void Append(byte[] bytes, int length)
@@ -124,15 +124,9 @@
                 break;
             case ControlCharacterCommand.ControlCode.FF: // NB: could clear screen with this if we were so inclined. apparently xterm treats this as LF though, let's emulate.
             case ControlCharacterCommand.ControlCode.LF:
-                if (this.currentLine == short.MaxValue)
+                if (this.currentLine == this.lines.Size - 1)
                 {
-                    // XXX: perf nightmare, need to turn lines into a circular buffer probs.
-                    this.lines.RemoveAt(0);
-                    this.lines.Add(new Line());
-                }
-                else if (this.currentLine == this.lines.Count - 1)
-                {
-                    this.lines.Add(new Line());
+                    this.lines.PushBack(new Line());
                 }
 
                 this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
@@ -158,7 +152,7 @@
                 for (var y = 0; y < this.Height; ++y)
                 {
                     var renderLine = this.bufferTopVisibleLine + y;
-                    var line = renderLine < this.lines.Count ? this.lines[renderLine] : Line.Empty;
+                    var line = renderLine < this.lines.Size ? this.lines[renderLine] : Line.Empty;
                     short x = 0;
                     foreach (var c in line)
                     {
