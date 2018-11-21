@@ -124,7 +124,13 @@
                 break;
             case ControlCharacterCommand.ControlCode.FF: // NB: could clear screen with this if we were so inclined. apparently xterm treats this as LF though, let's emulate.
             case ControlCharacterCommand.ControlCode.LF:
-                if (this.currentLine == this.lines.Count - 1)
+                if (this.currentLine == short.MaxValue)
+                {
+                    // XXX: perf nightmare, need to turn lines into a circular buffer probs.
+                    this.lines.RemoveAt(0);
+                    this.lines.Add(new Line());
+                }
+                else if (this.currentLine == this.lines.Count - 1)
                 {
                     this.lines.Add(new Line());
                 }
@@ -149,20 +155,20 @@
         {
             lock (this.renderLock)
             {
-                for (var x = 0; x < this.Height; ++x)
+                for (var y = 0; y < this.Height; ++y)
                 {
-                    var renderLine = this.bufferTopVisibleLine + x;
+                    var renderLine = this.bufferTopVisibleLine + y;
                     var line = renderLine < this.lines.Count ? this.lines[renderLine] : Line.Empty;
-                    short y = 0;
+                    short x = 0;
                     foreach (var c in line)
                     {
                         target.RenderCharacter(c, x, y);
-                        ++y;
+                        ++x;
                     }
-                    while (y < this.Width)
+                    while (x < this.Width)
                     {
                         target.RenderCharacter(new Character { Glyph = ' ' }, x, y);
-                        ++y;
+                        ++x;
                     }
                 }
             }

@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:condo"
         mc:Ignorable="d"
         Title="MainWindow" SizeToContent="WidthAndHeight">
-    <Grid>
-        <TextBox Background="Black" Foreground="Gray" Name="stuff" FontFamily="Consolas" FontSize="14" IsReadOnly="True" />
+    <Grid Background="Black">
+        <Canvas Name="screenCanvas" Background="Black" />
     </Grid>
 </Window>

@@ -166,11 +166,13 @@
                         // this can happen when our parent disposes, safe to bail out silently.
                         return;
                     }
+                    /*
                     catch (Exception ex) // XXX: this is some lousy logging I don't normally recommend, need to kill later.
                     {
                         Logger.Verbose(ex.ToString());
                         throw;
                     }
+                    */
                 }
             }
         }

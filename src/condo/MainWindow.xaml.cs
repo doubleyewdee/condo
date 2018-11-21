@@ -1,6 +1,7 @@
 ﻿namespace condo
 {
     using System.ComponentModel;
+    using System.Diagnostics;
     using System.Globalization;
     using System.Text;
     using System.Windows;
@@ -13,7 +14,7 @@
     /// </summary>
     public partial class MainWindow : Window, IRenderTarget
     {
-        private DpiScale dpiInfo;
+        private Screen screen;
         private ConsoleWrapper console;
         private KeyHandler keyHandler;
         private Character[,] characters;
@@ -26,36 +27,24 @@
             System.Diagnostics.Debugger.Launch();
         }
 
+
         private void UpdateContents(object sender, PropertyChangedEventArgs args)
         {
             this.console.Buffer.Render(this);
-            this.Dispatcher.InvokeAsync(() =>  this.Redraw());
-        }
-
-        private Size DetermineSize()
-        {
-            DpiScale dpi = this.dpiInfo;
-
-            // because we only ever expect to work with monospace fonts we can extrapolate from any single character.
-            // lord help if someone gets real excited about proportional font console.
-            var sampleText = new FormattedText("x", CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
-                                               new Typeface(this.stuff.FontFamily, this.stuff.FontStyle, this.stuff.FontWeight, this.stuff.FontStretch),
-                                               this.stuff.FontSize, Brushes.Black, dpi.PixelsPerDip);
-
-            return new Size(sampleText.Width * this.console.Width, sampleText.Height * this.console.Height);
+            this.Dispatcher.InvokeAsync(() => this.Redraw());
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            this.dpiInfo = VisualTreeHelper.GetDpi(this);
+            this.screen = new Screen();
+            this.screenCanvas.Children.Add(this.screen);
+            this.screenCanvas.Width = this.screen.Width;
+            this.screenCanvas.Height = this.screen.Height;
+
             this.console = TerminalManager.Instance.GetOrCreate(0, "cmd.exe");
             this.keyHandler = new KeyHandler(this.console);
 
-            var stuffSize = this.DetermineSize();
-            this.stuff.Height = stuffSize.Height;
-            this.stuff.Width = stuffSize.Width;
-
-            this.characters = new Character[this.console.Height, this.console.Width];
+            this.characters = new Character[this.console.Width, this.console.Height];
             this.Redraw();
 
             this.console.PropertyChanged += this.UpdateContents;
@@ -82,17 +71,13 @@
 
         private void Redraw()
         {
-            var sb = new StringBuilder();
-            for (var x = 0; x < this.console.Height; ++x)
+            for (var x = 0; x < this.console.Width; ++x)
             {
-                for (var y = 0; y < this.console.Width; ++y)
+                for (var y = 0; y < this.console.Height; ++y)
                 {
-                    sb.Append((char)this.characters[x, y].Glyph);
+                    this.screen.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph);
                 }
-                sb.Append('\n');
             }
-
-            this.stuff.Text = sb.ToString();
         }
 
         public void RenderCharacter(Character c, int x, int y)
