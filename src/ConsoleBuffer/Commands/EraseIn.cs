@@ -1,30 +1,38 @@
-using System;
-
 namespace ConsoleBuffer.Commands
 {
-    public sealed class EraseInDisplay : ControlSequence
+    using System;
+
+    public sealed class EraseIn : ControlSequence
     {
         public enum Parameter
         {
-            Below = 0,
-            Above,
+            Before = 0,
+            After,
             All,
             // xterm supports '3' for saved lines.
             Unknown,
         }
 
-        public Parameter Direction { get; private set; }
+        public enum EraseType
+        {
+            Line = 0,
+            Display,
+        }
 
-        public EraseInDisplay(string bufferData) : base(bufferData)
+        public Parameter Direction { get; private set; }
+        public EraseType Type { get; private set; }
+
+        public EraseIn(string bufferData, EraseType type) : base(bufferData)
         {
             this.Direction = Parameter.Unknown;
+            this.Type = type;
             if (this.IsExtended)
             {
                 return; // extended means selective erase which we don't support.
             }
             if (this.Parameters.Count == 0)
             {
-                this.Direction = Parameter.Below;
+                this.Direction = Parameter.Before;
             }
             if (this.Parameters.Count == 1 && uint.TryParse(this.Parameters[0], out var param))
             {

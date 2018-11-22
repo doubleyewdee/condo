@@ -12,8 +12,12 @@ namespace ConsoleBuffer.Commands
             case 'h':
             case 'l':
                 return new SetMode(bufferData, command == 'h');
+            case 'H':
+                return new EraseCharacter(bufferData);
             case 'J':
-                return new EraseInDisplay(bufferData);
+                return new EraseIn(bufferData, EraseIn.EraseType.Display);
+            case 'K':
+                return new EraseIn(bufferData, EraseIn.EraseType.Line);
             }
             return new Unsupported($"^[[{bufferData}{command}");
         }

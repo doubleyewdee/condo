@@ -65,20 +65,7 @@ namespace ConsoleBuffer
                     switch (this.parser.Append(this.currentChar))
                     {
                     case ParserAppendResult.Render:
-                        this.lines[this.CurrentLine].Set(this.cursorX, new Character { Glyph = this.currentChar });
-                        ++this.cursorX;
-                        if (this.cursorX == this.Width)
-                        {
-                            this.cursorX = 0;
-                            if (this.cursorY == this.Height - 1)
-                            {
-                                this.ScrollDown();
-                            }
-                            else
-                            {
-                                ++this.cursorY;
-                            }
-                        }
+                        this.RenderAtCursor(this.currentChar);
                         break;
                     case ParserAppendResult.Complete:
                         this.ExecuteParserCommand();
@@ -92,6 +79,28 @@ namespace ConsoleBuffer
                     default:
                         throw new InvalidOperationException("unexpected parser result");
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Renders the current character at the cursor, advances the cursor, and proceeds to the next line if necessary while scrolling the buffer.
+        /// </summary>
+        /// <param name="ch"></param>
+        private void RenderAtCursor(int ch)
+        {
+            this.lines[this.CurrentLine].Set(this.cursorX, new Character { Glyph = ch });
+            ++this.cursorX;
+            if (this.cursorX == this.Width)
+            {
+                this.cursorX = 0;
+                if (this.cursorY == this.Height - 1)
+                {
+                    this.ScrollDown();
+                }
+                else
+                {
+                    ++this.cursorY;
                 }
             }
         }
@@ -171,27 +180,70 @@ namespace ConsoleBuffer
         {
             switch (cmd)
             {
-            case Commands.EraseInDisplay eid:
+            case Commands.EraseCharacter ec:
+                for (var c = 0; c < ec.Count; ++c)
+                {
+                    this.lines[this.CurrentLine].SetGlyph(this.cursorX, 0x20);
+                    ++this.cursorX;
+                    if (this.cursorX == this.Width)
+                    {
+                        // we won't advance beyond the end of viewable space when erasing.
+                        if (this.cursorY < this.Height - 1)
+                        {
+                            ++this.cursorY;
+                            this.cursorX = 0;
+                        }
+                    }
+                }
+                break;
+            case Commands.EraseIn eid when eid.Type == Commands.EraseIn.EraseType.Display:
+                int startY, endY;
                 switch (eid.Direction)
                 {
-                case Commands.EraseInDisplay.Parameter.All:
-                    for (var y = this.topVisibleLine; y <= this.bottomVisibleLine; ++y)
-                    {
-                        this.lines[y].Clear();
-                    }
+                case Commands.EraseIn.Parameter.All:
+                    startY = this.topVisibleLine;
+                    endY = this.bottomVisibleLine;
                     break;
-                case Commands.EraseInDisplay.Parameter.Above:
-                    for (var y = this.topVisibleLine; y < this.CurrentLine; ++y)
-                    {
-                        this.lines[y].Clear();
-                    }
+                case Commands.EraseIn.Parameter.Before:
+                    startY = this.topVisibleLine;
+                    endY = this.CurrentLine;
                     break;
-                case Commands.EraseInDisplay.Parameter.Below:
-                    for (var y = this.CurrentLine; y < this.bottomVisibleLine; ++y)
-                    {
-                        this.lines[y].Clear();
-                    }
+                case Commands.EraseIn.Parameter.After:
+                    startY = this.CurrentLine;
+                    endY = this.bottomVisibleLine;
                     break;
+                default:
+                    return;
+                }
+
+                for (var y = startY; y <= endY; ++y)
+                {
+                    this.lines[y].Clear();
+                }
+                break;
+            case Commands.EraseIn eil when eil.Type == Commands.EraseIn.EraseType.Line:
+                int startX, endX;
+                switch (eil.Direction)
+                {
+                case Commands.EraseIn.Parameter.All:
+                    startX = 0;
+                    endX = this.Width - 1;
+                    break;
+                case Commands.EraseIn.Parameter.Before:
+                    startX = 0;
+                    endX = this.cursorX;
+                    break;
+                case Commands.EraseIn.Parameter.After:
+                    startX = this.cursorX;
+                    endX = this.Width - 1;
+                    break;
+                default:
+                    return;
+                }
+
+                for (var x = startX; x <= endX; ++x)
+                {
+                    this.lines[this.CurrentLine].SetGlyph(x, 0x20);
                 }
                 break;
             case Commands.SetMode sm:

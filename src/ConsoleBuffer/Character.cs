@@ -1,4 +1,4 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer
 {
     // XXX: Gonna end up with a lot of these and they're really freakin' big.
     // could consider a morphable type with different sizes to avoid the (currently) 12 bytes-per-character issue.
@@ -12,7 +12,6 @@
             public byte R;
             public byte G;
             public byte B;
-            public byte A;
         }
 
         public ColorInfo Foreground { get; set; }

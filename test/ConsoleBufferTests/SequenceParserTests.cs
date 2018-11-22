@@ -62,17 +62,17 @@ namespace ConsoleBufferTests
         }
 
         [TestMethod]
-        [DataRow("", ConsoleBuffer.Commands.EraseInDisplay.Parameter.Below)]
-        [DataRow("0", ConsoleBuffer.Commands.EraseInDisplay.Parameter.Below)]
-        [DataRow("1", ConsoleBuffer.Commands.EraseInDisplay.Parameter.Above)]
-        [DataRow("2", ConsoleBuffer.Commands.EraseInDisplay.Parameter.All)]
-        [DataRow("?2", ConsoleBuffer.Commands.EraseInDisplay.Parameter.Unknown)]
-        [DataRow("-50", ConsoleBuffer.Commands.EraseInDisplay.Parameter.Unknown)]
-        public void EraseInDisplay(string direction, ConsoleBuffer.Commands.EraseInDisplay.Parameter expectedDirection)
+        [DataRow("", ConsoleBuffer.Commands.EraseIn.Parameter.Before)]
+        [DataRow("0", ConsoleBuffer.Commands.EraseIn.Parameter.Before)]
+        [DataRow("1", ConsoleBuffer.Commands.EraseIn.Parameter.After)]
+        [DataRow("2", ConsoleBuffer.Commands.EraseIn.Parameter.All)]
+        [DataRow("?2", ConsoleBuffer.Commands.EraseIn.Parameter.Unknown)]
+        [DataRow("-50", ConsoleBuffer.Commands.EraseIn.Parameter.Unknown)]
+        public void EraseInDisplay(string direction, ConsoleBuffer.Commands.EraseIn.Parameter expectedDirection)
         {
             var command = $"\x1b[{direction}J";
             var parser = this.EnsureCommandParses(command);
-            var cmd = parser.Command as ConsoleBuffer.Commands.EraseInDisplay;
+            var cmd = parser.Command as ConsoleBuffer.Commands.EraseIn;
             Assert.IsNotNull(cmd);
             Assert.AreEqual(expectedDirection, cmd.Direction);
         }
@@ -96,6 +96,22 @@ namespace ConsoleBufferTests
                 Assert.AreEqual(on, cmd.Set);
                 Assert.AreEqual(expectedSetting, cmd.Setting);
             }
+        }
+
+        [TestMethod]
+        [DataRow("", 1)]
+        [DataRow("1", 1)]
+        [DataRow("8675309", 1)]
+        [DataRow(";;;", 1)]
+        [DataRow("42", 42)]
+        [DataRow("0", 1)]
+        public void EraseCharacter(string data, int count)
+        {
+            var command = $"\x1b[{data}H";
+            var parser = this.EnsureCommandParses(command);
+            var cmd = parser.Command as ConsoleBuffer.Commands.EraseCharacter;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(count, cmd.Count);
         }
 
         private SequenceParser EnsureCommandParses(string command)

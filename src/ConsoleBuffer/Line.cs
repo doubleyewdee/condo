@@ -28,6 +28,23 @@ namespace ConsoleBuffer
             this.chars[pos] = ch;
         }
 
+        /// <summary>
+        /// Set the glyph value at the given position while retaining existing properties.
+        /// </summary>
+        /// <param name="pos">Position in line.</param>
+        /// <param name="glyph">Value to store.</param>
+        public void SetGlyph(int pos, int glyph)
+        {
+            if (this.chars.Count <= pos)
+            {
+                this.Extend(pos);
+            }
+
+            var current = this.chars[pos];
+            current.Glyph = glyph;
+            this.chars[pos] = current;
+        }
+
         public void Clear()
         {
             this.chars.Clear();
@@ -41,7 +58,6 @@ namespace ConsoleBuffer
                 this.chars.Add(new Character { Glyph = ' ' });
             }
         }
-
 
         public IEnumerator<Character> GetEnumerator()
         {
