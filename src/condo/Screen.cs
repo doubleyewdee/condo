@@ -6,6 +6,7 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Windows;
+    using System.Windows.Input;
     using System.Windows.Media;
     using System.Windows.Threading;
     using ConsoleBuffer;
@@ -17,7 +18,7 @@
         private VisualCollection cells;
         private DpiScale dpiInfo;
         private readonly GlyphTypeface typeface;
-        private readonly int fontSize = 14;
+        private readonly int fontSize = 16;
         private readonly double cellWidth, cellHeight;
         private readonly Point baselineOrigin;
         private readonly Rect cellRectangle;
@@ -27,7 +28,7 @@
 
         private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(10);
         private readonly Stopwatch redrawWatch = new Stopwatch();
-        private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(200);
+        private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(250);
         private readonly Stopwatch cursorBlinkWatch = new Stopwatch();
 
         public Screen(ConsoleWrapper console)
@@ -49,12 +50,17 @@
             this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSize);
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
 
-            this.Console.PropertyChanged += this.UpdateContents;
             this.redrawWatch.Start();
             this.cursorBlinkWatch.Start();
 
-            this.Resize();
+            this.Console.PropertyChanged += this.UpdateContents;
             CompositionTarget.Rendering += this.RenderFrame;
+            this.MouseEnter += (sender, args) =>
+            {
+                args.MouseDevice.OverrideCursor = Cursors.IBeam;
+            };
+
+            this.Resize();
         }
 
         bool cursorBlunk;

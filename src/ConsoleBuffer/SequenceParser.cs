@@ -167,6 +167,7 @@
                 return ParserAppendResult.Pending;
             }
 
+            return this.CompleteCommand(ControlSequenceCommand.Create((char)character, this.buffer.ToString()));
             return this.CompleteCommand(new UnsupportedCommand($"^[[{this.buffer.ToString()}{(char)character}"));
         }
 
