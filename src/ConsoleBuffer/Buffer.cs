@@ -30,7 +30,7 @@ namespace ConsoleBuffer
         {
             get
             {
-                return this.topVisibleLine + this.CursorPosition.Y;
+                return this.topVisibleLine + this.cursorY;
             }
         }
 
@@ -48,7 +48,7 @@ namespace ConsoleBuffer
 
             for (var y = 0; y < this.Height; ++y)
             {
-                this.lines.PushBack(new Line());
+                this.lines.PushBack(new Line(null));
             }
             this.topVisibleLine = 0;
             this.bottomVisibleLine = this.Height - 1;
@@ -180,6 +180,23 @@ namespace ConsoleBuffer
         {
             switch (cmd)
             {
+            case Commands.CursorMove cu:
+                switch (cu.Direction)
+                {
+                case Commands.CursorMove.CursorDirection.Up:
+                    this.cursorY = (short)Math.Max(0, this.cursorY - cu.Count);
+                    break;
+                case Commands.CursorMove.CursorDirection.Down:
+                    this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + cu.Count);
+                    break;
+                case Commands.CursorMove.CursorDirection.Backward:
+                    this.cursorX = (short)Math.Max(0, this.cursorX - cu.Count);
+                    break;
+                case Commands.CursorMove.CursorDirection.Forward:
+                    this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + cu.Count);
+                    break;
+                }
+                break;
             case Commands.EraseCharacter ec:
                 for (var c = 0; c < ec.Count; ++c)
                 {
@@ -187,12 +204,16 @@ namespace ConsoleBuffer
                     ++this.cursorX;
                     if (this.cursorX == this.Width)
                     {
-                        // we won't advance beyond the end of viewable space when erasing.
-                        if (this.cursorY < this.Height - 1)
+                        // we won't advance beyond the end of viewable space when erasing, otherwise
+                        // move on to the next line.
+                        if (this.cursorY == this.Height - 1)
                         {
-                            ++this.cursorY;
-                            this.cursorX = 0;
+                            this.cursorX = (short)(this.Width - 1);
+                            break;
                         }
+
+                        ++this.cursorY;
+                        this.cursorX = 0;
                     }
                 }
                 break;
@@ -246,6 +267,16 @@ namespace ConsoleBuffer
                     this.lines[this.CurrentLine].SetGlyph(x, 0x20);
                 }
                 break;
+            case Commands.SetCursorPosition cursorPos:
+                if (cursorPos.PosX > -1)
+                {
+                    this.cursorX = (short)Math.Min(this.Width - 1, cursorPos.PosX);
+                }
+                if (cursorPos.PosY > -1)
+                {
+                    this.cursorY = (short)Math.Min(this.Height - 1, cursorPos.PosY);
+                }
+                break;
             case Commands.SetMode sm:
                 switch (sm.Setting)
                 {
@@ -273,7 +304,7 @@ namespace ConsoleBuffer
                 --lines;
                 if (this.bottomVisibleLine == this.lines.Capacity - 1)
                 {
-                    this.lines.PushBack(new Line()); // will force an old line from the buffer;
+                    this.lines.PushBack(new Line(this.lines[this.bottomVisibleLine])); // will force an old line from the buffer;
                 }
                 else
                 {
@@ -281,7 +312,7 @@ namespace ConsoleBuffer
                     ++this.bottomVisibleLine;
                     if (this.lines.Size <= this.bottomVisibleLine)
                     {
-                        this.lines.PushBack(new Line());
+                        this.lines.PushBack(new Line(this.lines[this.bottomVisibleLine - 1]));
                     }
                 }
             }
@@ -297,17 +328,11 @@ namespace ConsoleBuffer
                 for (var y = 0; y < this.Height; ++y)
                 {
                     var renderLine = this.topVisibleLine + y;
-                    var line = renderLine < this.lines.Size ? this.lines[renderLine] : Line.Empty;
-                    short x = 0;
-                    foreach (var c in line)
-                    {
-                        target.RenderCharacter(c, x, y);
-                        ++x;
-                    }
-                    while (x < this.Width)
-                    {
-                        target.RenderCharacter(new Character { Glyph = ' ' }, x, y);
-                        ++x;
+                    var line = this.lines[renderLine];
+
+                    for (var x = 0; x < this.Width; ++x)
+                    { 
+                        target.RenderCharacter(line.Get(x), x, y);
                     }
                 }
             }
