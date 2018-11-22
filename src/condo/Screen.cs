@@ -1,14 +1,12 @@
-﻿namespace condo
+namespace condo
 {
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
-    using System.Threading;
     using System.Windows;
     using System.Windows.Input;
     using System.Windows.Media;
-    using System.Windows.Threading;
     using ConsoleBuffer;
 
     public sealed class Screen : FrameworkElement, IRenderTarget
@@ -24,6 +22,7 @@
         private readonly Rect cellRectangle;
         private int horizontalCells, verticalCells;
         private Character[,] characters;
+        bool cursorInverted;
         private volatile int shouldRedraw;
 
         private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(10);
@@ -63,7 +62,6 @@
             this.Resize();
         }
 
-        bool cursorBlunk;
         private void RenderFrame(object sender, EventArgs e)
         {
             if (this.redrawWatch.Elapsed >= MaxRedrawFrequency && this.shouldRedraw != 0)
@@ -74,12 +72,15 @@
                 this.redrawWatch.Restart();
             }
 
-            if (this.cursorBlinkWatch.Elapsed >= BlinkFrequency)
+            if (this.Console.Buffer.CursorVisible)
             {
-                (var x, var y) = this.Console.Buffer.CursorPosition;
-                this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph, this.cursorBlunk);
-                this.cursorBlunk = !this.cursorBlunk;
-                this.cursorBlinkWatch.Restart();
+                if (this.cursorBlinkWatch.Elapsed >= BlinkFrequency)
+                {
+                    this.cursorInverted = this.Console.Buffer.CursorBlink ? !this.cursorInverted : true;
+                    (var x, var y) = this.Console.Buffer.CursorPosition;
+                    this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph, this.cursorInverted);
+                    this.cursorBlinkWatch.Restart();
+                }
             }
         }
 

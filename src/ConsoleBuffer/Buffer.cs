@@ -1,4 +1,4 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer
 {
     using System;
     using System.Collections.Generic;
@@ -15,22 +15,22 @@
         private short cursorX;
         private short cursorY;
         private int currentChar;
+        /// <summary>
+        /// we store X/Y as 0-offset indexes for convenience. escape codes will pass these around as 1-offset (top left is 1,1)
+        /// and we'll translate that nonsense where we have to.
+        /// </summary>
         public (short X, short Y) CursorPosition => (this.cursorX, this.cursorY);
         public bool CursorVisible { get; private set; }
         public bool CursorBlink { get; private set; }
 
-        private short bufferTopVisibleLine
+        private int topVisibleLine;
+        private int bottomVisibleLine;
+
+        private int CurrentLine
         {
             get
             {
-                return (short)Math.Max(0, this.lines.Size - this.Height);
-            }
-        }
-        private short currentLine
-        {
-            get
-            {
-                return (short)(this.bufferTopVisibleLine + this.CursorPosition.Y);
+                return this.topVisibleLine + this.CursorPosition.Y;
             }
         }
 
@@ -44,7 +44,14 @@
             this.Width = width;
             this.Height = height;
             this.CursorVisible = this.CursorBlink = true;
-            this.lines.PushBack(new Line());
+            this.cursorX = this.cursorY = 0;
+
+            for (var y = 0; y < this.Height; ++y)
+            {
+                this.lines.PushBack(new Line());
+            }
+            this.topVisibleLine = 0;
+            this.bottomVisibleLine = this.Height - 1;
         }
 
         public void Append(byte[] bytes, int length)
@@ -58,8 +65,20 @@
                     switch (this.parser.Append(this.currentChar))
                     {
                     case ParserAppendResult.Render:
-                        this.lines[this.currentLine].Set(this.cursorX, new Character { Glyph = this.currentChar });
-                        this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + 1);
+                        this.lines[this.CurrentLine].Set(this.cursorX, new Character { Glyph = this.currentChar });
+                        ++this.cursorX;
+                        if (this.cursorX == this.Width)
+                        {
+                            this.cursorX = 0;
+                            if (this.cursorY == this.Height - 1)
+                            {
+                                this.ScrollDown();
+                            }
+                            else
+                            {
+                                ++this.cursorY;
+                            }
+                        }
                         break;
                     case ParserAppendResult.Complete:
                         this.ExecuteParserCommand();
@@ -102,10 +121,13 @@
                     this.OnPropertyChanged("Title");
                 }
                 break;
+            case Commands.ControlSequence csiCommand:
+                this.HandleControlSequence(csiCommand);
+                break;
             case Commands.Unsupported unsupported:
                 break;
             default:
-                throw new InvalidOperationException("Unknown command type passed.");
+                throw new InvalidOperationException($"Unknown command type passed: {this.parser.Command?.GetType()}.");
             }
         }
 
@@ -127,9 +149,9 @@
                 break;
             case Commands.ControlCharacter.ControlCode.FF: // NB: could clear screen with this if we were so inclined. apparently xterm treats this as LF though, let's emulate.
             case Commands.ControlCharacter.ControlCode.LF:
-                if (this.currentLine == this.lines.Size - 1)
+                if (this.CurrentLine == this.bottomVisibleLine)
                 {
-                    this.lines.PushBack(new Line());
+                    this.ScrollDown();
                 }
 
                 this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
@@ -145,6 +167,74 @@
             }
         }
 
+        private void HandleControlSequence(Commands.ControlSequence cmd)
+        {
+            switch (cmd)
+            {
+            case Commands.EraseInDisplay eid:
+                switch (eid.Direction)
+                {
+                case Commands.EraseInDisplay.Parameter.All:
+                    for (var y = this.topVisibleLine; y <= this.bottomVisibleLine; ++y)
+                    {
+                        this.lines[y].Clear();
+                    }
+                    break;
+                case Commands.EraseInDisplay.Parameter.Above:
+                    for (var y = this.topVisibleLine; y < this.CurrentLine; ++y)
+                    {
+                        this.lines[y].Clear();
+                    }
+                    break;
+                case Commands.EraseInDisplay.Parameter.Below:
+                    for (var y = this.CurrentLine; y < this.bottomVisibleLine; ++y)
+                    {
+                        this.lines[y].Clear();
+                    }
+                    break;
+                }
+                break;
+            case Commands.SetMode sm:
+                switch (sm.Setting)
+                {
+                case Commands.SetMode.Parameter.CursorBlink:
+                    this.CursorBlink = sm.Set;
+                    break;
+                case Commands.SetMode.Parameter.CursorShow:
+                    this.CursorVisible = sm.Set;
+                    break;
+                }
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown CSI command type {cmd.GetType()}.");
+            }
+        }
+
+        /// <summary>
+        /// Scroll the visible buffer down, adding new lines if needed.
+        /// If we're at the bottom of the buffer we will replace lines from the top with new, blank lines.
+        /// </summary>
+        private void ScrollDown(int lines = 1)
+        {
+            while (lines > 0)
+            {
+                --lines;
+                if (this.bottomVisibleLine == this.lines.Capacity - 1)
+                {
+                    this.lines.PushBack(new Line()); // will force an old line from the buffer;
+                }
+                else
+                {
+                    ++this.topVisibleLine;
+                    ++this.bottomVisibleLine;
+                    if (this.lines.Size <= this.bottomVisibleLine)
+                    {
+                        this.lines.PushBack(new Line());
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Render character-by-character onto the specified target.
         /// </summary>
@@ -154,7 +244,7 @@
             {
                 for (var y = 0; y < this.Height; ++y)
                 {
-                    var renderLine = this.bufferTopVisibleLine + y;
+                    var renderLine = this.topVisibleLine + y;
                     var line = renderLine < this.lines.Size ? this.lines[renderLine] : Line.Empty;
                     short x = 0;
                     foreach (var c in line)

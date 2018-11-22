@@ -9,20 +9,26 @@ namespace ConsoleBuffer.Commands
         {
             switch (command)
             {
+            case 'h':
+            case 'l':
+                return new SetMode(bufferData, command == 'h');
             case 'J':
-                var cmd = new EraseInDisplay(bufferData);
-                if (!cmd.IsExtended) // currently no support for selective erase in display
-                    return cmd;
-                break;
+                return new EraseInDisplay(bufferData);
             }
             return new Unsupported($"^[[{bufferData}{command}");
         }
 
-        protected bool IsExtended { get; private set; }
+        public bool IsExtended { get; private set; }
         protected IList<string> Parameters { get; private set; }
         protected ControlSequence(string bufferData) : base(bufferData) { }
         protected override void Parse(string bufferData)
         {
+            if (bufferData.Length == 0)
+            {
+                this.Parameters = Array.Empty<string>();
+                return;
+            }
+
             var startIndex = 0;
             if (bufferData[0] == '?')
             {

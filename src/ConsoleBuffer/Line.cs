@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +28,11 @@ namespace ConsoleBuffer
             this.chars[pos] = ch;
         }
 
+        public void Clear()
+        {
+            this.chars.Clear();
+        }
+
         private void Extend(int pos)
         {
             // XXX: not efficient.
@@ -37,14 +42,15 @@ namespace ConsoleBuffer
             }
         }
 
+
         public IEnumerator<Character> GetEnumerator()
         {
-            return chars.GetEnumerator();
+            return this.chars.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return chars.GetEnumerator();
+            return this.chars.GetEnumerator();
         }
 
         public override string ToString()
