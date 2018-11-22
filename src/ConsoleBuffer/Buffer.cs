@@ -92,41 +92,41 @@
         {
             switch (this.parser.Command)
             {
-            case ControlCharacterCommand ctrl:
+            case Commands.ControlCharacter ctrl:
                 this.HandleControlCharacter(ctrl.Code);
                 break;
-            case OSCommand osCommand:
-                if (osCommand.Command == OSCommand.Type.SetTitle)
+            case Commands.OS osCommand:
+                if (osCommand.Command == Commands.OS.Type.SetTitle)
                 {
                     this.Title = osCommand.Title;
                     this.OnPropertyChanged("Title");
                 }
                 break;
-            case UnsupportedCommand unsupported:
+            case Commands.Unsupported unsupported:
                 break;
             default:
                 throw new InvalidOperationException("Unknown command type passed.");
             }
         }
 
-        private void HandleControlCharacter(ControlCharacterCommand.ControlCode code)
+        private void HandleControlCharacter(Commands.ControlCharacter.ControlCode code)
         {
             switch (code)
             {
-            case ControlCharacterCommand.ControlCode.NUL:
+            case Commands.ControlCharacter.ControlCode.NUL:
                 // XXX: do we want to print these in some magic way? it seems like most terminals just discard these characters when received.
                 break;
-            case ControlCharacterCommand.ControlCode.BEL:
+            case Commands.ControlCharacter.ControlCode.BEL:
                 // XXX: need to raise a beep event.
                 break;
-            case ControlCharacterCommand.ControlCode.BS:
+            case Commands.ControlCharacter.ControlCode.BS:
                 this.cursorX = (short)Math.Max(0, this.cursorX - 1);
                 break;
-            case ControlCharacterCommand.ControlCode.CR:
+            case Commands.ControlCharacter.ControlCode.CR:
                 this.cursorX = 0;
                 break;
-            case ControlCharacterCommand.ControlCode.FF: // NB: could clear screen with this if we were so inclined. apparently xterm treats this as LF though, let's emulate.
-            case ControlCharacterCommand.ControlCode.LF:
+            case Commands.ControlCharacter.ControlCode.FF: // NB: could clear screen with this if we were so inclined. apparently xterm treats this as LF though, let's emulate.
+            case Commands.ControlCharacter.ControlCode.LF:
                 if (this.currentLine == this.lines.Size - 1)
                 {
                     this.lines.PushBack(new Line());
@@ -134,7 +134,7 @@
 
                 this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
                 break;
-            case ControlCharacterCommand.ControlCode.TAB:
+            case Commands.ControlCharacter.ControlCode.TAB:
                 // XXX: we don't handle commands to set tab stops yet but I guess need to do so at some point!
                 this.cursorX = (short)Math.Max(this.Width - 1, (this.cursorX + 8 - (this.cursorX % 8)));
                 break;

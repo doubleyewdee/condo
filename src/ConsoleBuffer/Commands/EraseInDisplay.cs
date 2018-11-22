@@ -1,7 +1,7 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer.Commands
 {
-    public sealed class EraseInDisplayCommand : ControlSequenceCommand
+    public sealed class EraseInDisplay : ControlSequence
     {
-        public EraseInDisplayCommand(string bufferData) : base(bufferData) { }
+        public EraseInDisplay(string bufferData) : base(bufferData) { }
     }
 }

@@ -75,7 +75,7 @@
         /// <summary>
         /// The current command (may be null if none).
         /// </summary>
-        public BaseCommand Command { get; private set; }
+        public Commands.Base Command { get; private set; }
 
         public SequenceParser() { }
 
@@ -111,22 +111,22 @@
             switch (character)
             {
             case '\0':
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.NUL));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.NUL));
             case '\a':
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.BEL));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.BEL));
             case '\b':
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.BS));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.BS));
             case '\f':
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.FF));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.FF));
             case '\n':
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.LF));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.LF));
             case '\r':
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.CR));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.CR));
             case '\t':
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.TAB));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.TAB));
             case '\v':
                 // NB: old timey tech sure was funny. vertical tabs. ha ha ha.
-                return this.CompleteCommand(new ControlCharacterCommand(ControlCharacterCommand.ControlCode.LF));
+                return this.CompleteCommand(new Commands.ControlCharacter(Commands.ControlCharacter.ControlCode.LF));
             case 0x1b: // ^[ / escape
                 this.state = State.Basic;
                 return ParserAppendResult.Pending;
@@ -152,7 +152,7 @@
                 this.state = State.ApplicationProgramCommand;
                 return ParserAppendResult.Pending;
             default:
-                return this.CompleteCommand(new UnsupportedCommand($"^[{(char)character}"), ParserAppendResult.Invalid);
+                return this.CompleteCommand(new Commands.Unsupported($"^[{(char)character}"), ParserAppendResult.Invalid);
             }
         }
 
@@ -167,8 +167,7 @@
                 return ParserAppendResult.Pending;
             }
 
-            return this.CompleteCommand(ControlSequenceCommand.Create((char)character, this.buffer.ToString()));
-            return this.CompleteCommand(new UnsupportedCommand($"^[[{this.buffer.ToString()}{(char)character}"));
+            return this.CompleteCommand(Commands.ControlSequence.Create((char)character, this.buffer.ToString()));
         }
 
         private ParserAppendResult AppendOSCommand(int character)
@@ -177,7 +176,7 @@
             {
             case '\a':
             case '\0':
-                return this.CompleteCommand(new OSCommand(this.buffer.ToString()));
+                return this.CompleteCommand(new Commands.OS(this.buffer.ToString()));
             default:
                 this.buffer.Append((char)character); // XXX: nukes astral plane support for giganto unicode characters. care later.
                 return ParserAppendResult.Pending;
@@ -189,13 +188,13 @@
             switch (character)
             {
             case '\0':
-                return this.CompleteCommand(new UnsupportedCommand("(ASC or PM goo)"));
+                return this.CompleteCommand(new Commands.Unsupported("(ASC or PM goo)"));
             default:
                 return ParserAppendResult.Pending;
             }
         }
 
-        private ParserAppendResult CompleteCommand(BaseCommand command, ParserAppendResult result = ParserAppendResult.Complete)
+        private ParserAppendResult CompleteCommand(Commands.Base command, ParserAppendResult result = ParserAppendResult.Complete)
         {
             this.Command = command ?? throw new ArgumentNullException(nameof(command));
             this.state = State.Reset;

@@ -1,6 +1,6 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer.Commands
 {
-    public sealed class OSCommand : BaseCommand
+    public sealed class OS : Base
     {
         public enum Type
         {
@@ -11,7 +11,7 @@
         public Type Command { get; private set; }
         public string Title { get; private set; }
 
-        public OSCommand(string bufferData) : base(bufferData) { }
+        public OS(string bufferData) : base(bufferData) { }
 
         protected override void Parse(string bufferData)
         {

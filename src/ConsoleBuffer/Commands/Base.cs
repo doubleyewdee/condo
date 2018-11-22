@@ -1,8 +1,8 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer.Commands
 {
-    public abstract class BaseCommand
+    public abstract class Base
     {
-        internal BaseCommand(string bufferData)
+        internal Base(string bufferData)
         {
             this.Parse(bufferData);
         }
@@ -10,9 +10,9 @@
         protected abstract void Parse(string bufferData);
     }
 
-    public sealed class UnsupportedCommand : BaseCommand
+    public sealed class Unsupported : Base
     {
-        internal UnsupportedCommand(string buffer) : base(null)
+        internal Unsupported(string buffer) : base(null)
         {
             Logger.Verbose($"Unsupported command: {buffer}");
         }

@@ -1,6 +1,6 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer.Commands
 {
-    public sealed class ControlCharacterCommand : BaseCommand
+    public sealed class ControlCharacter : Base
     {
         public enum ControlCode
         {
@@ -36,7 +36,7 @@
 
         public readonly ControlCode Code;
 
-        public ControlCharacterCommand(ControlCode code) : base(null)
+        public ControlCharacter(ControlCode code) : base(null)
         {
             this.Code = code;
         }
