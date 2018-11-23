@@ -148,7 +148,19 @@ namespace ConsoleBuffer
                 // XXX: need to raise a beep event.
                 break;
             case Commands.ControlCharacter.ControlCode.BS:
-                this.cursorX = (short)Math.Max(0, this.cursorX - 1);
+                // backspace wrap to previous line if not on first line, if we're at 0,0 we go nowhere.
+                if (this.cursorX == 0)
+                {
+                    if (this.cursorY > 0)
+                    {
+                        --this.cursorY;
+                        this.cursorX = (short)(this.Width - 1);
+                    }
+                }
+                else
+                {
+                    --this.cursorX;
+                }
                 break;
             case Commands.ControlCharacter.ControlCode.CR:
                 this.cursorX = 0;

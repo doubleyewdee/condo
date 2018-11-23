@@ -1,4 +1,4 @@
-﻿namespace condo
+namespace condo
 {
     using System.ComponentModel;
     using System.Windows;
@@ -25,7 +25,7 @@
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            this.console = TerminalManager.Instance.GetOrCreate(0, "cmd.exe");
+            this.console = TerminalManager.Instance.GetOrCreate(0, "bash.exe");
             this.keyHandler = new KeyHandler(this.console);
 
             this.screen = new Screen(this.console);

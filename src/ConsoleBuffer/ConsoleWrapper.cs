@@ -93,9 +93,9 @@ namespace ConsoleBuffer
             if (   NativeMethods.CreatePipe(out pipeTTYin, out this.writeHandle, IntPtr.Zero, 0)
                 && NativeMethods.CreatePipe(out this.readHandle, out pipeTTYout, IntPtr.Zero, 0))
             {
-                ThrowForHResult(NativeMethods.CreatePseudoConsole(new NativeMethods.COORD { X = this.Width, Y = this.Height },
+                ThrowForWin32Error(NativeMethods.CreatePseudoConsole(new NativeMethods.COORD { X = this.Width, Y = this.Height },
                                                                   pipeTTYin, pipeTTYout, 0, out this.consoleHandle),
-                                "Failed to create PTY");
+                                   "Failed to create PTY");
 
                 // It is safe to close these as they have been duped to the child console host and will be closed on that end.
                 if (!pipeTTYin.IsInvalid) pipeTTYin.Dispose();
@@ -109,7 +109,7 @@ namespace ConsoleBuffer
 
         private void InitializeStartupInfo()
         {
-            IntPtr allocSize = IntPtr.Zero;
+            var allocSize = IntPtr.Zero;
             // yes this method really returns true *if it fails to get the size as requested*
             // ... fuckin' Windows.
             if (NativeMethods.InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref allocSize) || allocSize == IntPtr.Zero)
@@ -122,13 +122,13 @@ namespace ConsoleBuffer
             this.startupInfo.lpAttributeList = Marshal.AllocHGlobal(allocSize);
             if (!NativeMethods.InitializeProcThreadAttributeList(this.startupInfo.lpAttributeList, 1, 0, ref allocSize))
             {
-                ThrowForHResult(Marshal.GetLastWin32Error(), "Unable to initialze process startup info.");
+                ThrowForWin32Error(Marshal.GetLastWin32Error(), "Unable to initialze process startup info.");
             }
 
             if (!NativeMethods.UpdateProcThreadAttribute(this.startupInfo.lpAttributeList, 0, (IntPtr)NativeMethods.PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, this.consoleHandle,
                                                          (IntPtr)IntPtr.Size, IntPtr.Zero, IntPtr.Zero))
             {
-                ThrowForHResult(Marshal.GetLastWin32Error(), "Unable to update process startup info.");
+                ThrowForWin32Error(Marshal.GetLastWin32Error(), "Unable to update process startup info.");
             }
         }
 
@@ -141,7 +141,7 @@ namespace ConsoleBuffer
             if (!NativeMethods.CreateProcess(null, this.Command, ref processSecurityAttr, ref threadSecurityAttr, false,
                                              NativeMethods.EXTENDED_STARTUPINFO_PRESENT, IntPtr.Zero, null, ref this.startupInfo, out this.processInfo))
             {
-                ThrowForHResult(Marshal.GetLastWin32Error(), "Unable to start process.");
+                ThrowForWin32Error(Marshal.GetLastWin32Error(), "Unable to start process.");
             }
         }
 
@@ -192,10 +192,10 @@ namespace ConsoleBuffer
             }
         }
 
-        private static void ThrowForHResult(int hr, string exceptionMessage)
+        private static void ThrowForWin32Error(int win32Error, string exceptionMessage)
         {
-            if (hr != 0)
-                throw new InvalidOperationException($"{exceptionMessage}: {Marshal.GetHRForLastWin32Error()}");
+            if (win32Error != 0)
+                throw new InvalidOperationException($"{exceptionMessage}: 0x{Marshal.GetHRForLastWin32Error():x}", new Win32Exception(win32Error));
         }
 
         #region INotifyPropertyChanged
