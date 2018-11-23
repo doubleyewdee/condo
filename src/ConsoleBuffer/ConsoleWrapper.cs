@@ -1,9 +1,10 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer
 {
     using System;
     using System.ComponentModel;
     using System.IO;
     using System.Runtime.InteropServices;
+    using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Win32.SafeHandles;
 
@@ -159,6 +160,7 @@
                             continue;
 
                         this.Buffer.Append(input, read);
+                        Logger.Verbose($"read: {Encoding.UTF8.GetString(input, 0, read)}");
                         this.OnPropertyChanged(nameof(this.Buffer));
                     }
                     catch (ObjectDisposedException)

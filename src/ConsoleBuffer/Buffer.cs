@@ -1,10 +1,7 @@
 namespace ConsoleBuffer
 {
     using System;
-    using System.Collections.Generic;
     using System.ComponentModel;
-    using System.IO;
-    using System.Text;
 
     public sealed class Buffer : INotifyPropertyChanged
     {
@@ -181,115 +178,143 @@ namespace ConsoleBuffer
             switch (cmd)
             {
             case Commands.CursorMove cu:
-                switch (cu.Direction)
-                {
-                case Commands.CursorMove.CursorDirection.Up:
-                    this.cursorY = (short)Math.Max(0, this.cursorY - cu.Count);
-                    break;
-                case Commands.CursorMove.CursorDirection.Down:
-                    this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + cu.Count);
-                    break;
-                case Commands.CursorMove.CursorDirection.Backward:
-                    this.cursorX = (short)Math.Max(0, this.cursorX - cu.Count);
-                    break;
-                case Commands.CursorMove.CursorDirection.Forward:
-                    this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + cu.Count);
-                    break;
-                }
+                this.HandleCursorMove(cu);
                 break;
-            case Commands.EraseCharacter ec:
-                for (var c = 0; c < ec.Count; ++c)
-                {
-                    this.lines[this.CurrentLine].SetGlyph(this.cursorX, 0x20);
-                    ++this.cursorX;
-                    if (this.cursorX == this.Width)
-                    {
-                        // we won't advance beyond the end of viewable space when erasing, otherwise
-                        // move on to the next line.
-                        if (this.cursorY == this.Height - 1)
-                        {
-                            this.cursorX = (short)(this.Width - 1);
-                            break;
-                        }
-
-                        ++this.cursorY;
-                        this.cursorX = 0;
-                    }
-                }
+            case Commands.EraseCharacter ech:
+                this.HandleEraseCharacter(ech);
                 break;
             case Commands.EraseIn eid when eid.Type == Commands.EraseIn.EraseType.Display:
-                int startY, endY;
-                switch (eid.Direction)
-                {
-                case Commands.EraseIn.Parameter.All:
-                    startY = this.topVisibleLine;
-                    endY = this.bottomVisibleLine;
-                    break;
-                case Commands.EraseIn.Parameter.Before:
-                    startY = this.topVisibleLine;
-                    endY = this.CurrentLine;
-                    break;
-                case Commands.EraseIn.Parameter.After:
-                    startY = this.CurrentLine;
-                    endY = this.bottomVisibleLine;
-                    break;
-                default:
-                    return;
-                }
-
-                for (var y = startY; y <= endY; ++y)
-                {
-                    this.lines[y].Clear();
-                }
+                this.HandleEraseInDisplay(eid);
                 break;
             case Commands.EraseIn eil when eil.Type == Commands.EraseIn.EraseType.Line:
-                int startX, endX;
-                switch (eil.Direction)
-                {
-                case Commands.EraseIn.Parameter.All:
-                    startX = 0;
-                    endX = this.Width - 1;
-                    break;
-                case Commands.EraseIn.Parameter.Before:
-                    startX = 0;
-                    endX = this.cursorX;
-                    break;
-                case Commands.EraseIn.Parameter.After:
-                    startX = this.cursorX;
-                    endX = this.Width - 1;
-                    break;
-                default:
-                    return;
-                }
-
-                for (var x = startX; x <= endX; ++x)
-                {
-                    this.lines[this.CurrentLine].SetGlyph(x, 0x20);
-                }
+                this.HandleEraseInLine(eil);
                 break;
-            case Commands.SetCursorPosition cursorPos:
-                if (cursorPos.PosX > -1)
-                {
-                    this.cursorX = (short)Math.Min(this.Width - 1, cursorPos.PosX);
-                }
-                if (cursorPos.PosY > -1)
-                {
-                    this.cursorY = (short)Math.Min(this.Height - 1, cursorPos.PosY);
-                }
+            case Commands.SetCursorPosition scp:
+                this.HandleSetCursorPosition(scp);
                 break;
             case Commands.SetMode sm:
-                switch (sm.Setting)
-                {
-                case Commands.SetMode.Parameter.CursorBlink:
-                    this.CursorBlink = sm.Set;
-                    break;
-                case Commands.SetMode.Parameter.CursorShow:
-                    this.CursorVisible = sm.Set;
-                    break;
-                }
+                this.HandleSetMode(sm);
                 break;
             default:
                 throw new InvalidOperationException($"Unknown CSI command type {cmd.GetType()}.");
+            }
+        }
+
+        private void HandleCursorMove(Commands.CursorMove cu)
+        {
+            switch (cu.Direction)
+            {
+            case Commands.CursorMove.CursorDirection.Up:
+                this.cursorY = (short)Math.Max(0, this.cursorY - cu.Count);
+                break;
+            case Commands.CursorMove.CursorDirection.Down:
+                this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + cu.Count);
+                break;
+            case Commands.CursorMove.CursorDirection.Backward:
+                this.cursorX = (short)Math.Max(0, this.cursorX - cu.Count);
+                break;
+            case Commands.CursorMove.CursorDirection.Forward:
+                this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + cu.Count);
+                break;
+            }
+        }
+
+        private void HandleEraseCharacter(Commands.EraseCharacter ech)
+        {
+            // erase characters starting at the current cursor position and possibly advancing down lines. do not erase below the bottom visible line.
+            var y = this.CurrentLine;
+            var x = this.cursorX;
+            for (var c = 0; c < ech.Count; ++c)
+            {
+                this.lines[y].SetGlyph(x, 0x20);
+                ++x;
+                if (x == this.Width)
+                {
+                    if (++y > this.bottomVisibleLine)
+                    {
+                        break;
+                    }
+                    x = 0;
+                }
+            }
+        }
+
+        private void HandleEraseInDisplay(Commands.EraseIn eid)
+        {
+            int startY, endY;
+            switch (eid.Direction)
+            {
+            case Commands.EraseIn.Parameter.All:
+                startY = this.topVisibleLine;
+                endY = this.bottomVisibleLine;
+                break;
+            case Commands.EraseIn.Parameter.Before:
+                startY = this.topVisibleLine;
+                endY = this.CurrentLine;
+                break;
+            case Commands.EraseIn.Parameter.After:
+                startY = this.CurrentLine;
+                endY = this.bottomVisibleLine;
+                break;
+            default:
+                return;
+            }
+
+            for (var y = startY; y <= endY; ++y)
+            {
+                this.lines[y].Clear();
+            }
+        }
+
+        private void HandleEraseInLine(Commands.EraseIn eil)
+        {
+            int startX, endX;
+            switch (eil.Direction)
+            {
+            case Commands.EraseIn.Parameter.All:
+                startX = 0;
+                endX = this.Width - 1;
+                break;
+            case Commands.EraseIn.Parameter.Before:
+                startX = 0;
+                endX = this.cursorX;
+                break;
+            case Commands.EraseIn.Parameter.After:
+                startX = this.cursorX;
+                endX = this.Width - 1;
+                break;
+            default:
+                return;
+            }
+
+            for (var x = startX; x <= endX; ++x)
+            {
+                this.lines[this.CurrentLine].SetGlyph(x, 0x20);
+            }
+        }
+
+        private void HandleSetCursorPosition(Commands.SetCursorPosition scp)
+        {
+            if (scp.PosX > -1)
+            {
+                this.cursorX = (short)Math.Min(this.Width - 1, scp.PosX);
+            }
+            if (scp.PosY > -1)
+            {
+                this.cursorY = (short)Math.Min(this.Height - 1, scp.PosY);
+            }
+        }
+
+        private void HandleSetMode(Commands.SetMode sm)
+        {
+            switch (sm.Setting)
+            {
+            case Commands.SetMode.Parameter.CursorBlink:
+                this.CursorBlink = sm.Set;
+                break;
+            case Commands.SetMode.Parameter.CursorShow:
+                this.CursorVisible = sm.Set;
+                break;
             }
         }
 
