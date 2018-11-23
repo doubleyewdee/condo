@@ -25,7 +25,7 @@ namespace condo
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            this.console = TerminalManager.Instance.GetOrCreate(0, "bash.exe");
+            this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
 
             this.screen = new Screen(this.console);

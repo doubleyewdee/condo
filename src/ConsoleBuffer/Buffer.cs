@@ -11,13 +11,25 @@ namespace ConsoleBuffer
 
         private short cursorX;
         private short cursorY;
+        private short MaxCursorX => (short)(this.Width - 1);
+        private short MaxCursorY => (short)(this.Height - 1);
+
+        private long receivedCharacters;
+        private long wrapCharacter;
         private int currentChar;
+
         /// <summary>
         /// we store X/Y as 0-offset indexes for convenience. escape codes will pass these around as 1-offset (top left is 1,1)
         /// and we'll translate that nonsense where we have to.
         /// </summary>
         public (short X, short Y) CursorPosition => (this.cursorX, this.cursorY);
+        /// <summary>
+        /// True if the cursor is currently visible.
+        /// </summary>
         public bool CursorVisible { get; private set; }
+        /// <summary>
+        /// True if the cursor should be blinking.
+        /// </summary>
         public bool CursorBlink { get; private set; }
 
         private int topVisibleLine;
@@ -31,7 +43,13 @@ namespace ConsoleBuffer
             }
         }
 
+        /// <summary>
+        /// Width of the console in characters.
+        /// </summary>
         public short Width { get; set; }
+        /// <summary>
+        /// Height of the console in characters.
+        /// </summary>
         public short Height { get; set; }
 
         public string Title { get; private set; }
@@ -48,7 +66,7 @@ namespace ConsoleBuffer
                 this.lines.PushBack(new Line(null));
             }
             this.topVisibleLine = 0;
-            this.bottomVisibleLine = this.Height - 1;
+            this.bottomVisibleLine = this.MaxCursorY;
         }
 
         public void Append(byte[] bytes, int length)
@@ -59,6 +77,7 @@ namespace ConsoleBuffer
                 {
                     if (!this.AppendChar(bytes[i])) continue;
 
+                    ++this.receivedCharacters;
                     switch (this.parser.Append(this.currentChar))
                     {
                     case ParserAppendResult.Render:
@@ -86,12 +105,10 @@ namespace ConsoleBuffer
         /// <param name="ch"></param>
         private void RenderAtCursor(int ch)
         {
-            this.lines[this.CurrentLine].Set(this.cursorX, new Character { Glyph = ch });
-            ++this.cursorX;
-            if (this.cursorX == this.Width)
+            
+            if (this.cursorX == this.MaxCursorX && this.wrapCharacter == this.receivedCharacters - 1)
             {
-                this.cursorX = 0;
-                if (this.cursorY == this.Height - 1)
+                if (this.cursorY == this.MaxCursorY)
                 {
                     this.ScrollDown();
                 }
@@ -99,6 +116,21 @@ namespace ConsoleBuffer
                 {
                     ++this.cursorY;
                 }
+                this.cursorX = 0;
+                this.wrapCharacter = -1;
+            }
+
+            this.lines[this.CurrentLine].Set(this.cursorX, new Character { Glyph = ch });
+            if (this.cursorX == this.MaxCursorX)
+            {
+                // if we hit the end of line and our next character is also printable or a backspace we will do an implicit line-wrap.
+                // in the appropriate direction. this seems to conform with the expected behavior of applications which emit a variety
+                // of control characters/etc to ensure this wiggly state is resolved appropriately.
+                this.wrapCharacter = this.receivedCharacters;
+            }
+            else
+            {
+                ++this.cursorX;
             }
         }
 
@@ -148,18 +180,13 @@ namespace ConsoleBuffer
                 // XXX: need to raise a beep event.
                 break;
             case Commands.ControlCharacter.ControlCode.BS:
-                // backspace wrap to previous line if not on first line, if we're at 0,0 we go nowhere.
-                if (this.cursorX == 0)
+                if (this.cursorX == this.MaxCursorX && this.wrapCharacter == this.receivedCharacters - 1)
                 {
-                    if (this.cursorY > 0)
-                    {
-                        --this.cursorY;
-                        this.cursorX = (short)(this.Width - 1);
-                    }
+                    // do nothing, terminal expected us to wrap.
                 }
                 else
                 {
-                    --this.cursorX;
+                    this.cursorX = (short)Math.Max(0, this.cursorX - 1);
                 }
                 break;
             case Commands.ControlCharacter.ControlCode.CR:
@@ -172,11 +199,11 @@ namespace ConsoleBuffer
                     this.ScrollDown();
                 }
 
-                this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + 1);
+                this.cursorY = (short)Math.Min(this.MaxCursorY, this.cursorY + 1);
                 break;
             case Commands.ControlCharacter.ControlCode.TAB:
                 // XXX: we don't handle commands to set tab stops yet but I guess need to do so at some point!
-                this.cursorX = (short)Math.Max(this.Width - 1, (this.cursorX + 8 - (this.cursorX % 8)));
+                this.cursorX = (short)Math.Max(this.MaxCursorX, (this.cursorX + 8 - (this.cursorX % 8)));
                 break;
             default:
                 // XXX: should log the sequence.
@@ -220,13 +247,13 @@ namespace ConsoleBuffer
                 this.cursorY = (short)Math.Max(0, this.cursorY - cu.Count);
                 break;
             case Commands.CursorMove.CursorDirection.Down:
-                this.cursorY = (short)Math.Min(this.Height - 1, this.cursorY + cu.Count);
+                this.cursorY = (short)Math.Min(this.MaxCursorY, this.cursorY + cu.Count);
                 break;
             case Commands.CursorMove.CursorDirection.Backward:
                 this.cursorX = (short)Math.Max(0, this.cursorX - cu.Count);
                 break;
             case Commands.CursorMove.CursorDirection.Forward:
-                this.cursorX = (short)Math.Min(this.Width - 1, this.cursorX + cu.Count);
+                this.cursorX = (short)Math.Min(this.MaxCursorX, this.cursorX + cu.Count);
                 break;
             }
         }
@@ -285,7 +312,7 @@ namespace ConsoleBuffer
             {
             case Commands.EraseIn.Parameter.All:
                 startX = 0;
-                endX = this.Width - 1;
+                endX = this.MaxCursorX;
                 break;
             case Commands.EraseIn.Parameter.Before:
                 startX = 0;
@@ -293,7 +320,7 @@ namespace ConsoleBuffer
                 break;
             case Commands.EraseIn.Parameter.After:
                 startX = this.cursorX;
-                endX = this.Width - 1;
+                endX = this.MaxCursorX;
                 break;
             default:
                 return;
@@ -309,11 +336,11 @@ namespace ConsoleBuffer
         {
             if (scp.PosX > -1)
             {
-                this.cursorX = (short)Math.Min(this.Width - 1, scp.PosX);
+                this.cursorX = (short)Math.Min(this.MaxCursorX, scp.PosX);
             }
             if (scp.PosY > -1)
             {
-                this.cursorY = (short)Math.Min(this.Height - 1, scp.PosY);
+                this.cursorY = (short)Math.Min(this.MaxCursorY, scp.PosY);
             }
         }
 
