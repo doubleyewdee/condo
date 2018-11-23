@@ -1,4 +1,4 @@
-﻿namespace condo
+namespace condo
 {
     using System;
     using System.IO;
@@ -12,7 +12,7 @@
     {
         public App()
         {
-            ConsoleBuffer.Logger.Init(Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), @"Source\Repos\wincon\wincon.log"));
+            //ConsoleBuffer.Logger.Init(Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), @"Source\Repos\wincon\wincon.log"));
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
         }

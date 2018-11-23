@@ -160,7 +160,6 @@ namespace ConsoleBuffer
                             continue;
 
                         this.Buffer.Append(input, read);
-                        Logger.Verbose($"read: {Encoding.UTF8.GetString(input, 0, read)}");
                         this.OnPropertyChanged(nameof(this.Buffer));
                     }
                     catch (ObjectDisposedException)

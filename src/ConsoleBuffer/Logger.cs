@@ -1,6 +1,7 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
     using System.Text;
 
@@ -35,6 +36,7 @@
         public static void Verbose(string msg)
         {
             Instance?.Write(msg);
+            Trace.WriteLine(msg);
         }
     }
 }
