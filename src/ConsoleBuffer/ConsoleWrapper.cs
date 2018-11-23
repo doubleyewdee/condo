@@ -5,6 +5,7 @@ namespace ConsoleBuffer
     using System.IO;
     using System.Runtime.InteropServices;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Win32.SafeHandles;
 
@@ -16,6 +17,17 @@ namespace ConsoleBuffer
 
         public short Width { get; set; }
         public short Height { get; set; }
+
+        /// <summary>
+        /// True if the process is running.
+        /// </summary>
+        public bool Running { get; private set; }
+
+        /// <summary>
+        /// The exit code of the process once terminated.
+        /// </summary>
+        public uint ProcessExitCode { get; private set; }
+
 
         /// <summary>
         /// The handle from which we read data from the console.
@@ -143,6 +155,32 @@ namespace ConsoleBuffer
             {
                 ThrowForWin32Error(Marshal.GetLastWin32Error(), "Unable to start process.");
             }
+
+            this.Running = true;
+            this.OnPropertyChanged("Running");
+
+            Task.Run(() =>
+            {
+                var ret = NativeMethods.WaitForSingleObject(this.processInfo.hProcess, uint.MaxValue);
+                if (ret != 0)
+                {
+                    // XXX: do something smarter here.
+                    Logger.Verbose($"Wait for process termination failed: {ret}");
+                    return;
+                }
+                if (!NativeMethods.GetExitCodeProcess(this.processInfo.hProcess, out var exitCode))
+                {
+                    Logger.Verbose($"Failed to get process exit code, errno={Marshal.GetLastWin32Error()}");
+                }
+
+                this.ProcessExitCode = exitCode;
+                this.Running = false;
+                this.OnPropertyChanged("Running");
+
+                // XXX: long-term I think we should have the presentation layer do this but let's dump it here for now
+                var msg = Encoding.UTF8.GetBytes($"\r\n[process terminated with code {exitCode}.]");
+                this.Buffer.Append(msg, msg.Length);
+            });
         }
 
         private void ReadConsoleTask()

@@ -1,4 +1,4 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer
 {
     using Microsoft.Win32.SafeHandles;
     using System;
@@ -97,7 +97,15 @@
 
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern int ClosePseudoConsole(IntPtr hPC);
-   
+
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        internal static extern bool CreatePipe(out SafeFileHandle hReadPipe, out SafeFileHandle hWritePipe, IntPtr lpPipeAttributes, int nSize); }
+        internal static extern bool CreatePipe(out SafeFileHandle hReadPipe, out SafeFileHandle hWritePipe, IntPtr lpPipeAttributes, int nSize);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
+    }
 }
