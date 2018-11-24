@@ -66,6 +66,10 @@ namespace condo
             {
                 args.MouseDevice.OverrideCursor = Cursors.IBeam;
             };
+            this.MouseLeave += (sender, args) =>
+            {
+                args.MouseDevice.OverrideCursor = Cursors.Arrow;
+            };
 
             this.Resize();
         }
@@ -74,14 +78,16 @@ namespace condo
         {
             if (this.redrawWatch.Elapsed >= MaxRedrawFrequency && this.shouldRedraw != 0)
             {
-                var startLine = this.VerticalOffset / this.cellHeight;
+                var startLine = this.VerticalOffset;
                 this.shouldRedraw = 0;
                 this.Buffer.RenderFromLine(this, (int)startLine);
                 this.Redraw();
+                this.ScrollOwner?.UpdateLayout();
+                this.ScrollOwner.ScrollToVerticalOffset(this.VerticalOffset);
                 this.redrawWatch.Restart();
             }
 
-            if (this.Buffer.CursorVisible)
+            if (this.Buffer.CursorVisible && this.VerticalOffset == this.ExtentHeight - this.ViewportHeight)
             {
                 if (this.cursorBlinkWatch.Elapsed >= BlinkFrequency)
                 {
@@ -189,13 +195,13 @@ namespace condo
         public bool CanVerticallyScroll { get; set; }
         public bool CanHorizontallyScroll { get; set; }
 
-        public double ExtentWidth => this.Buffer.Width * this.cellWidth;
+        public double ExtentWidth => this.Buffer.Width;
 
-        public double ExtentHeight => this.consoleBufferSize * this.cellHeight;
+        public double ExtentHeight => this.consoleBufferSize;
 
-        public double ViewportWidth => this.Buffer.Width * this.cellWidth;
+        public double ViewportWidth => this.Buffer.Width;
 
-        public double ViewportHeight => this.Buffer.Height * this.cellHeight;
+        public double ViewportHeight => this.Buffer.Height;
 
         public double HorizontalOffset => 0.0;
 
@@ -235,12 +241,12 @@ namespace condo
 
         public void PageUp()
         {
-            this.VerticalOffset -= this.Buffer.Height * this.cellHeight;
+            this.VerticalOffset -= this.Buffer.Height;
         }
 
         public void PageDown()
         {
-            this.VerticalOffset += this.Buffer.Height * this.cellHeight;
+            this.VerticalOffset += this.Buffer.Height;
         }
 
         public void PageLeft() { }
@@ -249,12 +255,12 @@ namespace condo
 
         public void MouseWheelUp()
         {
-            this.VerticalOffset -= 3 * this.cellHeight;
+            this.VerticalOffset -= 3;
         }
 
         public void MouseWheelDown()
         {
-            this.VerticalOffset += 3 * this.cellHeight;
+            this.VerticalOffset += 3;
         }
 
         public void MouseWheelLeft() { }
