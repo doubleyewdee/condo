@@ -1,4 +1,4 @@
-﻿namespace ConsoleBuffer
+namespace ConsoleBuffer
 {
     using System;
     using System.Text;
@@ -172,12 +172,12 @@
 
         private ParserAppendResult AppendOSCommand(int character)
         {
-            switch (character)
+            if (character < 0x20)
             {
-            case '\a':
-            case '\0':
                 return this.CompleteCommand(new Commands.OS(this.buffer.ToString()));
-            default:
+            }
+            else
+            {
                 this.buffer.Append((char)character); // XXX: nukes astral plane support for giganto unicode characters. care later.
                 return ParserAppendResult.Pending;
             }

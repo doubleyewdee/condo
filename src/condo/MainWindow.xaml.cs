@@ -40,6 +40,7 @@ namespace condo
             };
 
             this.KeyDown += this.keyHandler.OnKeyDown;
+            this.KeyDown += (_, args) => this.screen.VerticalOffset = double.MaxValue; // force scroll on keypress.
             this.TextInput += this.keyHandler.OnTextInput;
 
             this.console.PropertyChanged += (_, args) =>
