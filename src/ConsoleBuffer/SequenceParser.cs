@@ -172,13 +172,20 @@ namespace ConsoleBuffer
 
         private ParserAppendResult AppendOSCommand(int character)
         {
-            if (character < 0x20)
+            switch (character)
             {
+            case '\a':
                 return this.CompleteCommand(new Commands.OS(this.buffer.ToString()));
-            }
-            else
-            {
-                this.buffer.Append((char)character); // XXX: nukes astral plane support for giganto unicode characters. care later.
+            case '\\':
+                if (this.buffer.Length > 0 && this.buffer[this.buffer.Length - 1] == 0x1b)
+                {
+                    this.buffer.Remove(this.buffer.Length - 1, 1);
+                    return this.CompleteCommand(new Commands.OS(this.buffer.ToString()));
+                }
+                this.buffer.Append((char)character);
+                return ParserAppendResult.Pending;
+            default:
+                this.buffer.Append((char)character); // XXX: nukes astral plane support for giganto unicode characters. care later when emoji can be in title bars?
                 return ParserAppendResult.Pending;
             }
         }
@@ -187,9 +194,15 @@ namespace ConsoleBuffer
         {
             switch (character)
             {
-            case '\0':
-                return this.CompleteCommand(new Commands.Unsupported("(ASC or PM goo)"));
+            case '\\':
+                if (this.buffer.Length > 0 && this.buffer[this.buffer.Length - 1] == 0x1b)
+                {
+                    this.buffer.Remove(this.buffer.Length - 1, 1);
+                    return this.CompleteCommand(new Commands.Unsupported("(ASC or PM goo)"));
+                }
+                return ParserAppendResult.Pending;
             default:
+                this.buffer.Append((char)character);
                 return ParserAppendResult.Pending;
             }
         }

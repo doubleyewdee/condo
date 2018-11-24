@@ -38,7 +38,7 @@ namespace ConsoleBufferTests
         [DataRow('_')]
         public void UnsupportedAncientStuff(char c)
         {
-            var ancientCommand = $"\x1b{c} here is a long string of nonsense.\0";
+            var ancientCommand = $"\x1b{c} here is a long string of nonsense.\x1b\\";
 
             var parser = new SequenceParser();
             for (var i = 0; i < ancientCommand.Length - 1; ++i)
