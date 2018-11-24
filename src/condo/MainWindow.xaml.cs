@@ -44,6 +44,20 @@ namespace condo
             this.KeyDown += this.keyHandler.OnKeyDown;
             this.TextInput += this.keyHandler.OnTextInput;
 
+            this.console.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == "Running" && this.console.Running == false)
+                {
+                    this.KeyDown += (keySender, keyArgs) =>
+                    {
+                        if (keyArgs.Key == System.Windows.Input.Key.Enter)
+                        {
+                            this.Close();
+                        }
+                    };
+                }
+            };
+
             this.Closing += this.HandleClosing;
         }
 

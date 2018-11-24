@@ -81,7 +81,7 @@ namespace ConsoleBuffer
                     switch (this.parser.Append(this.currentChar))
                     {
                     case ParserAppendResult.Render:
-                        this.RenderAtCursor(this.currentChar);
+                        this.PrintAtCursor(this.currentChar);
                         break;
                     case ParserAppendResult.Complete:
                         this.ExecuteParserCommand();
@@ -103,7 +103,7 @@ namespace ConsoleBuffer
         /// Renders the current character at the cursor, advances the cursor, and proceeds to the next line if necessary while scrolling the buffer.
         /// </summary>
         /// <param name="ch"></param>
-        private void RenderAtCursor(int ch)
+        private void PrintAtCursor(int ch)
         {
             
             if (this.cursorX == this.MaxCursorX && this.wrapCharacter == this.receivedCharacters - 1)
@@ -385,17 +385,38 @@ namespace ConsoleBuffer
         /// <summary>
         /// Render character-by-character onto the specified target.
         /// </summary>
+        /// <param name="target">target to render on to.</param>
         public void Render(IRenderTarget target)
+        {
+            this.RenderFromLine(target, int.MaxValue);
+        }
+
+        /// <summary>
+        /// Render character-by-character onto the specified target.
+        /// </summary>
+        /// <param name="target">Target to render on to.</param>
+        /// <param name="startLine">Starting line to render from.</param>
+        /// <remarks>
+        /// If the starting line would not produce a full render it is silently set to the current top visible line,
+        /// producing a render of the current visible screen-buffer. Similarly negative line numbers are treated as 0.
+        /// </remarks>
+        public void RenderFromLine(IRenderTarget target, int startLine)
         {
             lock (this.renderLock)
             {
+                startLine = Math.Max(0, startLine);
+                if (startLine > this.topVisibleLine)
+                {
+                    startLine = this.topVisibleLine;
+                }
+
                 for (var y = 0; y < this.Height; ++y)
                 {
-                    var renderLine = this.topVisibleLine + y;
+                    var renderLine = startLine + y;
                     var line = this.lines[renderLine];
 
                     for (var x = 0; x < this.Width; ++x)
-                    { 
+                    {
                         target.RenderCharacter(line.Get(x), x, y);
                     }
                 }
