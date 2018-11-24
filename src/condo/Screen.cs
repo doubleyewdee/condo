@@ -74,27 +74,52 @@ namespace condo
             this.Resize();
         }
 
+        private void OnConsolePropertyChanged(object sender, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName == string.Empty)
+            {
+                // if we're scrolled to the bottom prior to redrawing (the conditional) indicate that we should render,
+                // if we are not scrolled to the bottom we don't need to render unless the offset is changed by the
+                // user.
+                if (this.VerticalOffset == this.ExtentHeight - this.ViewportHeight)
+                {
+                    this.shouldRedraw = 1;
+                }
+            }
+        }
+
         private void RenderFrame(object sender, EventArgs e)
         {
             if (this.redrawWatch.Elapsed >= MaxRedrawFrequency && this.shouldRedraw != 0)
             {
-                var startLine = this.VerticalOffset;
+                this.redrawWatch.Restart();
                 this.shouldRedraw = 0;
+
+                // when rendering we should update our view of the buffer size, and if we were previously scrolled
+                // to the bottom ensure we stay that way after doing so.
+                var bufferSize = this.Buffer.BufferSize;
+                var updateOffset = this.VerticalOffset == this.ExtentHeight - this.ViewportHeight;
+                this.consoleBufferSize = bufferSize;
+                if (updateOffset)
+                {
+                    this.VerticalOffset = double.MaxValue;
+                }
+
+                var startLine = this.VerticalOffset;
                 this.Buffer.RenderFromLine(this, (int)startLine);
                 this.Redraw();
-                this.ScrollOwner?.UpdateLayout();
-                this.ScrollOwner.ScrollToVerticalOffset(this.VerticalOffset);
-                this.redrawWatch.Restart();
+                this.ScrollOwner?.ScrollToVerticalOffset(this.VerticalOffset);
             }
 
             if (this.Buffer.CursorVisible && this.VerticalOffset == this.ExtentHeight - this.ViewportHeight)
             {
                 if (this.cursorBlinkWatch.Elapsed >= BlinkFrequency)
                 {
+                    this.cursorBlinkWatch.Restart();
+
                     this.cursorInverted = this.Buffer.CursorBlink ? !this.cursorInverted : true;
                     (var x, var y) = this.Buffer.CursorPosition;
                     this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph, this.cursorInverted);
-                    this.cursorBlinkWatch.Restart();
                 }
             }
         }
@@ -114,21 +139,6 @@ namespace condo
         protected override Size MeasureOverride(Size availableSize)
         {
             return new Size(this.cellWidth * this.horizontalCells, this.cellHeight * this.verticalCells);
-        }
-
-        private void OnConsolePropertyChanged(object sender, PropertyChangedEventArgs args)
-        {
-            // if we're scrolled to the bottom prior to redrawing (the conditional) indicate that we should render,
-            // and also ensure we remain scrolled to the bottom in the viewport;
-            if (this.VerticalOffset == this.ExtentHeight - this.ViewportHeight)
-            {
-                if (this.consoleBufferSize != this.Buffer.BufferSize)
-                {
-                    this.consoleBufferSize = this.Buffer.BufferSize;
-                    this.VerticalOffset = double.MaxValue; // ensures we stay scrolled to bottom.
-                }
-                this.shouldRedraw = 1;
-            }
         }
 
         private void Resize()
@@ -227,12 +237,12 @@ namespace condo
 
         public void LineUp()
         {
-            this.VerticalOffset -= this.cellHeight;
+            this.VerticalOffset -= 1;
         }
 
         public void LineDown()
         {
-            this.VerticalOffset += this.cellHeight;
+            this.VerticalOffset += 1;
         }
 
         public void LineLeft() { }
