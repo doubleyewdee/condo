@@ -52,6 +52,11 @@ namespace ConsoleBuffer
         /// </summary>
         public short Height { get; set; }
 
+        /// <summary>
+        /// Returns the total number of lines in the buffer.
+        /// </summary>
+        public int BufferSize { get { return this.lines.Size; } }
+
         public string Title { get; private set; }
 
         public Buffer(short width, short height)
@@ -96,6 +101,11 @@ namespace ConsoleBuffer
                         throw new InvalidOperationException("unexpected parser result");
                     }
                 }
+            }
+
+            if (length > 0)
+            {
+                this.OnPropertyChanged(string.Empty);
             }
         }
 
@@ -383,7 +393,7 @@ namespace ConsoleBuffer
         }
 
         /// <summary>
-        /// Render character-by-character onto the specified target.
+        /// Render the currently "on-screen" area character-by-character onto the specified target.
         /// </summary>
         /// <param name="target">target to render on to.</param>
         public void Render(IRenderTarget target)
@@ -392,7 +402,7 @@ namespace ConsoleBuffer
         }
 
         /// <summary>
-        /// Render character-by-character onto the specified target.
+        /// Render the specified buffer area character-by-character onto the specified target.
         /// </summary>
         /// <param name="target">Target to render on to.</param>
         /// <param name="startLine">Starting line to render from.</param>

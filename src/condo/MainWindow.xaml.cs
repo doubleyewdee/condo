@@ -9,7 +9,6 @@ namespace condo
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Screen screen;
         private ConsoleWrapper console;
         private KeyHandler keyHandler;
 
@@ -28,10 +27,9 @@ namespace condo
             this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
 
-            this.screen = new Screen(this.console);
-            this.screenCanvas.Children.Add(this.screen);
-            this.screenCanvas.Width = this.screen.Width;
-            this.screenCanvas.Height = this.screen.Height;
+            this.screen = new Screen(this.console.Buffer);
+            this.scrollViewer.Content = this.screen;
+            this.scrollViewer.CanContentScroll = true;
 
             this.console.Buffer.PropertyChanged += (_, args) =>
             {
@@ -46,7 +44,7 @@ namespace condo
 
             this.console.PropertyChanged += (_, args) =>
             {
-                if (args.PropertyName == "Running" && this.console.Running == false)
+                if (args.PropertyName == "Running" && this.console != null && this.console.Running == false)
                 {
                     this.KeyDown += (keySender, keyArgs) =>
                     {

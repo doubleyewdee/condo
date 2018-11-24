@@ -157,7 +157,7 @@ namespace ConsoleBuffer
             }
 
             this.Running = true;
-            this.OnPropertyChanged("Running");
+            this.OnPropertyChanged(nameof(this.Running));
 
             Task.Run(() =>
             {
@@ -175,7 +175,7 @@ namespace ConsoleBuffer
 
                 this.ProcessExitCode = exitCode;
                 this.Running = false;
-                this.OnPropertyChanged("Running");
+                this.OnPropertyChanged(nameof(this.Running));
 
                 // XXX: long-term I think we should have the presentation layer do this but let's dump it here for now
                 var msg = Encoding.UTF8.GetBytes($"\r\n[process terminated with code {exitCode}.]");
@@ -198,7 +198,6 @@ namespace ConsoleBuffer
                             continue;
 
                         this.Buffer.Append(input, read);
-                        this.OnPropertyChanged(nameof(this.Buffer));
                     }
                     catch (ObjectDisposedException)
                     {

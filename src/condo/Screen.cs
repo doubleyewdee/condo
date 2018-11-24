@@ -5,13 +5,15 @@ namespace condo
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Controls.Primitives;
     using System.Windows.Input;
     using System.Windows.Media;
     using ConsoleBuffer;
 
-    public sealed class Screen : FrameworkElement, IRenderTarget
+    public sealed class Screen : FrameworkElement, IRenderTarget, IScrollInfo
     {
-        public ConsoleWrapper Console { get; }
+        public ConsoleBuffer.Buffer Buffer { get; private set; }
 
         private VisualCollection cells;
         private DpiScale dpiInfo;
@@ -24,13 +26,19 @@ namespace condo
         private Character[,] characters;
         bool cursorInverted;
         private volatile int shouldRedraw;
+        private int consoleBufferSize;
 
         private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(10);
         private readonly Stopwatch redrawWatch = new Stopwatch();
         private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(250);
         private readonly Stopwatch cursorBlinkWatch = new Stopwatch();
 
-        public Screen(ConsoleWrapper console)
+        /// <summary>
+        /// Empty ctor for designer purposes at present. Probably don't use.
+        /// </summary>
+        public Screen() : this(new ConsoleBuffer.Buffer(80, 25)) { }
+
+        public Screen(ConsoleBuffer.Buffer buffer)
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
             this.cells = new VisualCollection(this);
@@ -39,10 +47,10 @@ namespace condo
                 throw new InvalidOperationException("Could not get desired font.");
             }
 
-            this.Console = console;
-            this.horizontalCells = console.Width;
-            this.verticalCells = console.Height;
-            this.characters = new Character[this.Console.Width, this.Console.Height];
+            this.Buffer = buffer;
+            this.horizontalCells = this.Buffer.Width;
+            this.verticalCells = this.Buffer.Height;
+            this.characters = new Character[this.Buffer.Width, this.Buffer.Height];
 
             this.cellWidth = this.typeface.AdvanceWidths[0] * this.fontSize;
             this.cellHeight = this.typeface.Height * this.fontSize;
@@ -52,7 +60,7 @@ namespace condo
             this.redrawWatch.Start();
             this.cursorBlinkWatch.Start();
 
-            this.Console.PropertyChanged += this.UpdateContents;
+            this.Buffer.PropertyChanged += this.OnConsolePropertyChanged;
             CompositionTarget.Rendering += this.RenderFrame;
             this.MouseEnter += (sender, args) =>
             {
@@ -66,18 +74,19 @@ namespace condo
         {
             if (this.redrawWatch.Elapsed >= MaxRedrawFrequency && this.shouldRedraw != 0)
             {
+                var startLine = this.VerticalOffset / this.cellHeight;
                 this.shouldRedraw = 0;
-                this.Console.Buffer.Render(this);
+                this.Buffer.RenderFromLine(this, (int)startLine);
                 this.Redraw();
                 this.redrawWatch.Restart();
             }
 
-            if (this.Console.Buffer.CursorVisible)
+            if (this.Buffer.CursorVisible)
             {
                 if (this.cursorBlinkWatch.Elapsed >= BlinkFrequency)
                 {
-                    this.cursorInverted = this.Console.Buffer.CursorBlink ? !this.cursorInverted : true;
-                    (var x, var y) = this.Console.Buffer.CursorPosition;
+                    this.cursorInverted = this.Buffer.CursorBlink ? !this.cursorInverted : true;
+                    (var x, var y) = this.Buffer.CursorPosition;
                     this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph, this.cursorInverted);
                     this.cursorBlinkWatch.Restart();
                 }
@@ -86,7 +95,7 @@ namespace condo
 
         public void Close()
         {
-            this.Console.PropertyChanged -= this.UpdateContents;
+            this.Buffer.PropertyChanged -= this.OnConsolePropertyChanged;
         }
 
         protected override int VisualChildrenCount => this.cells.Count;
@@ -101,9 +110,19 @@ namespace condo
             return new Size(this.cellWidth * this.horizontalCells, this.cellHeight * this.verticalCells);
         }
 
-        private void UpdateContents(object sender, PropertyChangedEventArgs args)
+        private void OnConsolePropertyChanged(object sender, PropertyChangedEventArgs args)
         {
-            this.shouldRedraw = 1;
+            // if we're scrolled to the bottom prior to redrawing (the conditional) indicate that we should render,
+            // and also ensure we remain scrolled to the bottom in the viewport;
+            if (this.VerticalOffset == this.ExtentHeight - this.ViewportHeight)
+            {
+                if (this.consoleBufferSize != this.Buffer.BufferSize)
+                {
+                    this.consoleBufferSize = this.Buffer.BufferSize;
+                    this.VerticalOffset = double.MaxValue; // ensures we stay scrolled to bottom.
+                }
+                this.shouldRedraw = 1;
+            }
         }
 
         private void Resize()
@@ -121,6 +140,7 @@ namespace condo
 
             this.Width = this.horizontalCells * this.cellWidth;
             this.Height = this.verticalCells * this.cellHeight;
+            this.consoleBufferSize = this.Buffer.BufferSize;
         }
 
         private DrawingVisual GetCell(int x, int y)
@@ -156,13 +176,102 @@ namespace condo
 
         private void Redraw()
         {
-            for (var x = 0; x < this.Console.Width; ++x)
+            for (var x = 0; x < this.Buffer.Width; ++x)
             {
-                for (var y = 0; y < this.Console.Height; ++y)
+                for (var y = 0; y < this.Buffer.Height; ++y)
                 {
                     this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph);
                 }
             }
         }
+
+        #region IScrollInfo
+        public bool CanVerticallyScroll { get; set; }
+        public bool CanHorizontallyScroll { get; set; }
+
+        public double ExtentWidth => this.Buffer.Width * this.cellWidth;
+
+        public double ExtentHeight => this.consoleBufferSize * this.cellHeight;
+
+        public double ViewportWidth => this.Buffer.Width * this.cellWidth;
+
+        public double ViewportHeight => this.Buffer.Height * this.cellHeight;
+
+        public double HorizontalOffset => 0.0;
+
+        private double verticalOffset;
+        public double VerticalOffset
+        {
+            get
+            {
+                return this.verticalOffset;
+            }
+            set
+            {
+                var newValue = Math.Max(0, Math.Min(this.ExtentHeight - this.ViewportHeight, value));
+                if (this.verticalOffset != newValue)
+                {
+                    this.verticalOffset = newValue;
+                    this.shouldRedraw = 1;
+                }
+            }
+        }
+
+        public ScrollViewer ScrollOwner { get; set; }
+
+        public void LineUp()
+        {
+            this.VerticalOffset -= this.cellHeight;
+        }
+
+        public void LineDown()
+        {
+            this.VerticalOffset += this.cellHeight;
+        }
+
+        public void LineLeft() { }
+
+        public void LineRight() { }
+
+        public void PageUp()
+        {
+            this.VerticalOffset -= this.Buffer.Height * this.cellHeight;
+        }
+
+        public void PageDown()
+        {
+            this.VerticalOffset += this.Buffer.Height * this.cellHeight;
+        }
+
+        public void PageLeft() { }
+
+        public void PageRight() { }
+
+        public void MouseWheelUp()
+        {
+            this.VerticalOffset -= 3 * this.cellHeight;
+        }
+
+        public void MouseWheelDown()
+        {
+            this.VerticalOffset += 3 * this.cellHeight;
+        }
+
+        public void MouseWheelLeft() { }
+
+        public void MouseWheelRight() { }
+
+        public void SetHorizontalOffset(double offset) { }
+
+        public void SetVerticalOffset(double offset)
+        {
+            this.VerticalOffset = offset;
+        }
+
+        public Rect MakeVisible(Visual visual, Rect rectangle)
+        {
+            throw new NotImplementedException();
+        }
+        #endregion
     }
 }
