@@ -13,7 +13,22 @@ namespace condo
 
     public sealed class Screen : FrameworkElement, IRenderTarget, IScrollInfo
     {
-        public ConsoleBuffer.Buffer Buffer { get; private set; }
+        private ConsoleBuffer.Buffer buffer;
+        public ConsoleBuffer.Buffer Buffer
+        {
+            private get { return this.buffer; }
+            set
+            {
+                if (this.buffer != null)
+                {
+                    this.Buffer.PropertyChanged -= this.OnBufferPropertyChanged;
+                }
+
+                this.buffer = value ?? throw new ArgumentNullException(nameof(value));
+                this.Resize();
+                this.Buffer.PropertyChanged += this.OnBufferPropertyChanged;
+            }
+        }
 
         private VisualCollection cells;
         private DpiScale dpiInfo;
@@ -36,7 +51,16 @@ namespace condo
         /// <summary>
         /// Empty ctor for designer purposes at present. Probably don't use.
         /// </summary>
-        public Screen() : this(new ConsoleBuffer.Buffer(80, 25)) { }
+        public Screen() : this(new ConsoleBuffer.Buffer(80, 25))
+        {
+#if DEBUG
+            for (var i = 0; i < 100; ++i)
+            {
+                var line = System.Text.Encoding.UTF8.GetBytes($"line {i}\r\n");
+                this.Buffer.Append(line, line.Length);
+            }
+#endif
+        }
 
         public Screen(ConsoleBuffer.Buffer buffer)
         {
@@ -46,21 +70,15 @@ namespace condo
             {
                 throw new InvalidOperationException("Could not get desired font.");
             }
-
-            this.Buffer = buffer;
-            this.horizontalCells = this.Buffer.Width;
-            this.verticalCells = this.Buffer.Height;
-            this.characters = new Character[this.Buffer.Width, this.Buffer.Height];
-
             this.cellWidth = this.typeface.AdvanceWidths[0] * this.fontSize;
             this.cellHeight = this.typeface.Height * this.fontSize;
             this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSize);
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
 
+            this.Buffer = buffer;
             this.redrawWatch.Start();
             this.cursorBlinkWatch.Start();
 
-            this.Buffer.PropertyChanged += this.OnConsolePropertyChanged;
             CompositionTarget.Rendering += this.RenderFrame;
             this.MouseEnter += (sender, args) =>
             {
@@ -74,7 +92,7 @@ namespace condo
             this.Resize();
         }
 
-        private void OnConsolePropertyChanged(object sender, PropertyChangedEventArgs args)
+        private void OnBufferPropertyChanged(object sender, PropertyChangedEventArgs args)
         {
             if (args.PropertyName == string.Empty)
             {
@@ -126,7 +144,7 @@ namespace condo
 
         public void Close()
         {
-            this.Buffer.PropertyChanged -= this.OnConsolePropertyChanged;
+            this.Buffer.PropertyChanged -= this.OnBufferPropertyChanged;
         }
 
         protected override int VisualChildrenCount => this.cells.Count;
@@ -144,6 +162,11 @@ namespace condo
         private void Resize()
         {
             this.cells.Clear();
+
+            this.horizontalCells = this.Buffer.Width;
+            this.verticalCells = this.Buffer.Height;
+            this.characters = new Character[this.Buffer.Width, this.Buffer.Height];
+
             for (var y = 0; y < this.verticalCells; ++y)
             {
                 for (var x = 0; x < this.horizontalCells; ++x)
