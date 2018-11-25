@@ -16,7 +16,7 @@ namespace condo
         private ConsoleBuffer.Buffer buffer;
         public ConsoleBuffer.Buffer Buffer
         {
-            private get { return this.buffer; }
+            get { return this.buffer; }
             set
             {
                 if (this.buffer != null)

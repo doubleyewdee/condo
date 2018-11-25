@@ -65,7 +65,7 @@ namespace ConsoleBuffer
             this.InitializeStartupInfo();
             this.StartProcess();
 
-            Task.Run(() => this.ReadConsoleTask());
+            Task.Factory.StartNew(() => this.ReadConsoleTask(), TaskCreationOptions.LongRunning);
             this.writeStream = new FileStream(this.writeHandle, FileAccess.Write);
         }
 
@@ -159,7 +159,7 @@ namespace ConsoleBuffer
             this.Running = true;
             this.OnPropertyChanged(nameof(this.Running));
 
-            Task.Run(() =>
+            Task.Factory.StartNew(() =>
             {
                 var ret = NativeMethods.WaitForSingleObject(this.processInfo.hProcess, uint.MaxValue);
                 if (ret != 0)
@@ -176,11 +176,7 @@ namespace ConsoleBuffer
                 this.ProcessExitCode = exitCode;
                 this.Running = false;
                 this.OnPropertyChanged(nameof(this.Running));
-
-                // XXX: long-term I think we should have the presentation layer do this but let's dump it here for now
-                var msg = Encoding.UTF8.GetBytes($"\r\n[process terminated with code {exitCode}.]");
-                this.Buffer.Append(msg, msg.Length);
-            });
+            }, TaskCreationOptions.LongRunning);
         }
 
         private void ReadConsoleTask()

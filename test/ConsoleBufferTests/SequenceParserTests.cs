@@ -176,6 +176,23 @@ namespace ConsoleBufferTests
             Assert.AreEqual(expectedY, cmd.PosY);
         }
 
+        [TestMethod]
+        [DataRow("0")]
+        [DataRow("")]
+        public void SGRReset(string data)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.IsFalse(cmd.HaveForeground);
+            Assert.AreEqual(new Character.ColorInfo(), cmd.ForegroundColor);
+            Assert.IsFalse(cmd.HaveBackground);
+            Assert.AreEqual(new Character.ColorInfo(), cmd.BackgroundColor);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Bold);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Underline);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Inverse);
+        }
+
         private SequenceParser EnsureCommandParses(string command)
         {
             var parser = new SequenceParser();

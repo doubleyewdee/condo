@@ -241,6 +241,9 @@ namespace ConsoleBuffer
             case Commands.SetCursorPosition scp:
                 this.HandleSetCursorPosition(scp);
                 break;
+            case Commands.SetGraphicsRendition sgr:
+                this.HandleSGR(sgr);
+                break;
             case Commands.SetMode sm:
                 this.HandleSetMode(sm);
                 break;
@@ -352,6 +355,11 @@ namespace ConsoleBuffer
             {
                 this.cursorY = (short)Math.Min(this.MaxCursorY, scp.PosY);
             }
+        }
+
+        private void HandleSGR(Commands.SetGraphicsRendition sgr)
+        {
+
         }
 
         private void HandleSetMode(Commands.SetMode sm)

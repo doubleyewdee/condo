@@ -28,6 +28,8 @@ namespace ConsoleBuffer.Commands
                 return new EraseIn(bufferData, EraseIn.EraseType.Display);
             case 'K':
                 return new EraseIn(bufferData, EraseIn.EraseType.Line);
+            case 'm':
+                return new SetGraphicsRendition(bufferData);
             case 'X':
                 return new EraseCharacter(bufferData);
             }

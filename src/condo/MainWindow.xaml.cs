@@ -53,6 +53,9 @@ namespace condo
             {
                 if (args.PropertyName == "Running" && this.console != null && this.console.Running == false)
                 {
+                    var msg = System.Text.Encoding.UTF8.GetBytes($"\r\n[process terminated with code {this.console.ProcessExitCode}, press <enter> to exit.]");
+                    this.screen.Buffer.Append(msg, msg.Length);
+
                     this.KeyDown += (keySender, keyArgs) =>
                     {
                         if (keyArgs.Key == System.Windows.Input.Key.Enter)
