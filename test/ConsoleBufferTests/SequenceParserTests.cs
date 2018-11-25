@@ -38,15 +38,22 @@ namespace ConsoleBufferTests
         [DataRow('_')]
         public void UnsupportedAncientStuff(char c)
         {
-            var ancientCommand = $"\x1b{c} here is a long string of nonsense.\x1b\\";
-
-            var parser = new SequenceParser();
-            for (var i = 0; i < ancientCommand.Length - 1; ++i)
-            {
-                Assert.AreEqual(ParserAppendResult.Pending, parser.Append(ancientCommand[i]));
-            }
-            Assert.AreEqual(ParserAppendResult.Complete, parser.Append(ancientCommand[ancientCommand.Length - 1]));
+            var parser = this.EnsureCommandParses($"\x1b{c} here is a long string of nonsense.\x1b\\");
             Assert.IsInstanceOfType(parser.Command, typeof(ConsoleBuffer.Commands.Unsupported));
+        }
+
+        [TestMethod]
+        [DataRow('A', ConsoleBuffer.Commands.CursorMove.CursorDirection.Up)]
+        [DataRow('B', ConsoleBuffer.Commands.CursorMove.CursorDirection.Down)]
+        [DataRow('C', ConsoleBuffer.Commands.CursorMove.CursorDirection.Forward)]
+        [DataRow('D', ConsoleBuffer.Commands.CursorMove.CursorDirection.Backward)]
+        public void BasicCursorMovement(char modifier, ConsoleBuffer.Commands.CursorMove.CursorDirection expectedDirection)
+        {
+            var parser = this.EnsureCommandParses($"\x1b{modifier}");
+            var cmd = parser.Command as ConsoleBuffer.Commands.CursorMove;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(expectedDirection, cmd.Direction);
+            Assert.AreEqual(1, cmd.Count);
         }
 
         [TestMethod]

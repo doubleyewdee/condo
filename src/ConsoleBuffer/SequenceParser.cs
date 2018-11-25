@@ -139,6 +139,11 @@ namespace ConsoleBuffer
         {
             switch (character)
             {
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+                return this.CompleteCommand(new Commands.CursorMove(string.Empty, (char)character));
             case '[':
                 this.state = State.ControlSequence;
                 return ParserAppendResult.Pending;
