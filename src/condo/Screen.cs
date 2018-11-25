@@ -26,9 +26,12 @@ namespace condo
 
                 this.buffer = value ?? throw new ArgumentNullException(nameof(value));
                 this.Resize();
-                this.Buffer.PropertyChanged += this.OnBufferPropertyChanged;
+                this.buffer.PropertyChanged += this.OnBufferPropertyChanged;
+                this.buffer.Palette = this.palette;
             }
         }
+
+        private readonly XtermPalette palette = new XtermPalette();
 
         private VisualCollection cells;
         private DpiScale dpiInfo;
@@ -137,7 +140,7 @@ namespace condo
 
                     this.cursorInverted = this.Buffer.CursorBlink ? !this.cursorInverted : true;
                     (var x, var y) = this.Buffer.CursorPosition;
-                    this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph, this.cursorInverted);
+                    this.SetCellCharacter(x, y, this.cursorInverted);
                 }
             }
         }
@@ -187,14 +190,16 @@ namespace condo
             return this.cells[x + y * this.horizontalCells] as DrawingVisual;
         }
 
-        public void SetCellCharacter(int x, int y, char c, bool invert = false)
+        public void SetCellCharacter(int x, int y, bool invert = false)
         {
+            var ch = this.characters[x, y];
+
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
                 GlyphRun gr;
                 try
                 {
-                    gr = new GlyphRun(this.typeface, 0, false, this.fontSize, (float)this.dpiInfo.PixelsPerDip, new[] { this.typeface.CharacterToGlyphMap[c] },
+                    gr = new GlyphRun(this.typeface, 0, false, this.fontSize, (float)this.dpiInfo.PixelsPerDip, new[] { this.typeface.CharacterToGlyphMap[(char)ch.Glyph] },
                         this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
                 }
                 catch (KeyNotFoundException)
@@ -203,8 +208,10 @@ namespace condo
                         this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
                 }
 
-                dc.DrawRectangle(!invert ? Brushes.Black : Brushes.Gray, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
-                dc.DrawGlyphRun(!invert ? Brushes.Gray : Brushes.Black, gr);
+                var backgroundBrush = new SolidColorBrush(new Color { R = ch.Background.R, G = ch.Background.G, B = ch.Background.B, A = 255 });
+                var foregroundBrush = new SolidColorBrush(new Color { R = ch.Foreground.R, G = ch.Foreground.G, B = ch.Foreground.B, A = 255 });
+                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
+                dc.DrawGlyphRun(!invert ? foregroundBrush : backgroundBrush, gr);
             }
         }
 
@@ -219,7 +226,7 @@ namespace condo
             {
                 for (var y = 0; y < this.Buffer.Height; ++y)
                 {
-                    this.SetCellCharacter(x, y, (char)this.characters[x, y].Glyph);
+                    this.SetCellCharacter(x, y);
                 }
             }
         }

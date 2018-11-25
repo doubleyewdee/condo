@@ -9,151 +9,97 @@ namespace ConsoleBuffer
     // the future.
     public struct Character
     {
-        [Flags]
-        public enum Options : byte
-        {
-            None = 0x00,
-            // we have 3 color bits which combine to represent the 8 "basic" colors of classic terminals
-            ColorBits = 0x07, // (0x01, 0x02, 0x04)
-            Black = 0x00,
-            Red = 0x01,
-            Green = 0x02,
-            Yellow = 0x03,
-            Blue = 0x04,
-            Magenta = 0x05,
-            Cyan = 0x06,
-            White = 0x07,
-
-            // we use 3 additional bits (currently) for flags
-            FlagBits = 0x38, // (0x08, 0x10, 0x20)
-            Bright = 0x08,
-            Underline = 0x10,
-            Inverse = 0x20,
-            Extended = 0x18,
-            // 0x28 free
-            // 0x38 free
-
-            // 0x40, 0x80 free bits
-        }
-
         public struct ColorInfo
         {
             public byte R;
             public byte G;
             public byte B;
-            public Options Options;
-
-            public bool Bright
-            {
-                get
-                {
-                    return ((byte)this.Options & (byte)Options.Bright) == (byte)Options.Bright;
-                }
-                set
-                {
-                    if (value)
-                    {
-                        this.Options = (Options)((byte)this.Options | (byte)Options.Bright);
-                    }
-                    else
-                    {
-                        this.Options = (Options)((byte)this.Options & ~(byte)Options.Bright);
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Whether the underline bit is set. Should not apply to background colors.
-            /// </summary>
-            public bool Underline
-            {
-                get
-                {
-                    return ((byte)this.Options & (byte)Options.Underline) == (byte)Options.Underline;
-                }
-                set
-                {
-                    if (value)
-                    {
-                        this.Options = (Options)((byte)this.Options | (byte)Options.Underline);
-                    }
-                    else
-                    {
-                        this.Options = (Options)((byte)this.Options & ~(byte)Options.Underline);
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Whether the 'inverse' bit is set. Should not apply to background colors.
-            /// </summary>
-            public bool Inverse
-            {
-                get
-                {
-                    return ((byte)this.Options & (byte)Options.Inverse) == (byte)Options.Inverse;
-                }
-                set
-                {
-                    if (value)
-                    {
-                        this.Options = (Options)((byte)this.Options | (byte)Options.Inverse);
-                    }
-                    else
-                    {
-                        this.Options = (Options)((byte)this.Options & ~(byte)Options.Inverse);
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Whether extended (RGB) color values should be applied for this cell.
-            /// </summary>
-            public bool Extended
-            {
-                get
-                {
-                    return ((byte)this.Options & (byte)Options.Extended) == (byte)Options.Extended;
-                }
-                set
-                {
-                    if (value)
-                    {
-                        this.Options = (Options)((byte)this.Options | (byte)Options.Extended);
-                    }
-                    else
-                    {
-                        this.Options = (Options)((byte)this.Options & ~(byte)Options.Extended);
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Classic color value.
-            /// </summary>
-            public Options BasicColor
-            {
-                get
-                {
-                    return (Options)((byte)this.Options & (byte)Options.ColorBits);
-                }
-                set
-                {
-                    var colorValue = (byte)value & (byte)Options.ColorBits;
-                    var colorlessOptions = (byte)this.Options & ~(byte)Options.ColorBits;
-                    this.Options = (Options)(colorlessOptions & colorValue);
-                }
-            }
-
-            /// <summary>
-            /// True if there is any classic color value set.
-            /// </summary>
-            public bool HasBasicColor => ((byte)this.Options & (byte)Options.ColorBits) != 0;
         }
 
         public ColorInfo Foreground { get; set; }
         public ColorInfo Background { get; set; }
 
+        // traditional colors occupy 3 bits, we keep two sets (foreground + background).
+        public const short Black = 0x0000;
+        public const short Red = 0x0001;
+        public const short Green = 0x0002;
+        public const short Yellow = 0x0003;
+        public const short Blue = 0x0004;
+        public const short Magenta = 0x0005;
+        public const short Cyan = 0x0006;
+        public const short White = 0x0007;
+        private const short ForegroundColorMask = 0x0007;
+        private const short BackgroundBitShift = 3;
+        private const short BackgroundColorMask = ForegroundColorMask << BackgroundBitShift;
+        // flags
+        private const short ForegroundBasicColorFlag = 0x0001 << 6;
+        private const short BackgroundBasicColorFlag = 0x0002 << 6;
+        private const short ForegroundBrightFlag = 0x0004 << 6;
+        private const short BackgroundBrightFlag = 0x0008 << 6;
+        private const short UnderlineFlag = 0x0010 << 6;
+        private const short InverseFlag = 0x0020 << 6;
+        private const short ForegroundExplicitFlag = 0x0040 << 6;
+        private const short BackgroundExplicitFlag = 0x0080 << 6;
+        private const short ExplicitFlags = (ForegroundExplicitFlag | BackgroundBrightFlag);
+        private const short ForegroundExtendedFlag = 0x0100 << 6;
+        private const short BackgroundExtendedFlag = unchecked((short)(0x0200 << 6));
+
+        public short Options;
+
+        public static short BasicColorOptions(short foreground = -1, short background = -1)
+        {
+            short options = 0;
+            if (foreground > -1)
+            {
+#if DEBUG
+                if (foreground > White)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(foreground));
+                }
+#endif
+                options |= (short)(foreground | ForegroundExplicitFlag | ForegroundBasicColorFlag);
+            }
+            if (background > -1)
+            {
+#if DEBUG
+                if (background > White)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(background));
+                }
+#endif
+                options |= (short)((background << BackgroundBitShift) | BackgroundExplicitFlag | BackgroundBasicColorFlag);
+            }
+
+            return options;
+        }
+
+        public short ForegroundColor => (short)(this.Options & ForegroundColorMask);
+        public bool HasBasicForegroundColor => (this.Options & ForegroundBasicColorFlag) != 0;
+        public short BackgroundColor => (short)(this.Options & BackgroundColorMask);
+        public bool HasBasicBackgroundColor => (this.Options & BackgroundBasicColorFlag) != 0;
+        public bool ForegroundBright => (this.Options & ForegroundBrightFlag) != 0;
+        public bool BackgroundBright => (this.Options & BackgroundBrightFlag) != 0;
+        public bool Underline => (this.Options & UnderlineFlag) != 0;
+        public bool Inverse => (this.Options & InverseFlag) != 0;
+        public bool ForegroundExplicit => (this.Options & ForegroundExplicitFlag) != 0;
+        public bool BackgroundExplicit => (this.Options & BackgroundExplicitFlag) != 0;
+        public bool ForegroundExtended => (this.Options & ForegroundExtendedFlag) != 0;
+        public bool BackgroundExtended => (this.Options & BackgroundExtendedFlag) != 0;
+
+        public short InheritedOptions => (short)(this.Options & ~(ForegroundExplicitFlag | BackgroundExplicitFlag));
+
+        /// <summary>
+        /// The unicode glyph for this character.
+        /// </summary>
         public int Glyph { get; set; } // XXX: a single int isn't sufficient to represent emoji with ZWJ. fix later.
+
+        public Character(Character parent)
+        {
+            this.Foreground = parent.Foreground;
+            this.Background = parent.Background;
+            this.Glyph = parent.Glyph;
+            this.Options = parent.Options;
+            this.Options &= ~ExplicitFlags;
+        }
     }
 }

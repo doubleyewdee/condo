@@ -32,6 +32,11 @@ namespace ConsoleBuffer
         /// </summary>
         public bool CursorBlink { get; private set; }
 
+        /// <summary>
+        /// The xterm palette to use when mapping color names/offsets to RGB values in characters.
+        /// </summary>
+        public XtermPalette Palette { get; set; }
+
         private int topVisibleLine;
         private int bottomVisibleLine;
 
@@ -66,9 +71,17 @@ namespace ConsoleBuffer
             this.CursorVisible = this.CursorBlink = true;
             this.cursorX = this.cursorY = 0;
 
+            var defaultChar = new Character()
+            {
+                Options = Character.BasicColorOptions(Character.White, Character.Black),
+                Glyph = 0x20,
+            };
+
             for (var y = 0; y < this.Height; ++y)
             {
-                this.lines.PushBack(new Line(null));
+                var line = new Line(null);
+                line.Set(0, defaultChar);
+                this.lines.PushBack(line);
             }
             this.topVisibleLine = 0;
             this.bottomVisibleLine = this.MaxCursorY;
@@ -115,7 +128,6 @@ namespace ConsoleBuffer
         /// <param name="ch"></param>
         private void PrintAtCursor(int ch)
         {
-            
             if (this.cursorX == this.MaxCursorX && this.wrapCharacter == this.receivedCharacters - 1)
             {
                 if (this.cursorY == this.MaxCursorY)
@@ -130,7 +142,31 @@ namespace ConsoleBuffer
                 this.wrapCharacter = -1;
             }
 
-            this.lines[this.CurrentLine].Set(this.cursorX, new Character { Glyph = ch });
+            // if we have an explicit value for the current cell hold on to it, otherwise inherit from the previous cell since
+            // we don't know what other activity has been done with cursor shuffling/SGR/etc.
+            var cell = this.lines[this.CurrentLine].Get(this.cursorX);
+            if (cell.ForegroundExplicit || cell.BackgroundExplicit || (this.cursorX == 0 && this.cursorY == 0))
+            {
+                cell = this.ColorCharacter(cell);
+                cell.Glyph = ch;
+                this.lines[this.CurrentLine].Set(this.cursorX, cell);
+            }
+            else
+            {
+                var x = this.cursorX;
+                var y = this.cursorY;
+                if (x == 0)
+                {
+                    --y;
+                    x = this.MaxCursorX;
+                }
+                var line = this.lines[this.topVisibleLine + y];
+                var inheritChar = line.Get(x);
+                inheritChar = this.ColorCharacter(inheritChar);
+                inheritChar.Glyph = ch;
+                this.lines[this.CurrentLine].Set(this.cursorX, inheritChar);
+            }
+
             if (this.cursorX == this.MaxCursorX)
             {
                 // if we hit the end of line and our next character is also printable or a backspace we will do an implicit line-wrap.
@@ -397,6 +433,59 @@ namespace ConsoleBuffer
                         this.lines.PushBack(new Line(this.lines[this.bottomVisibleLine - 1]));
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Fills in the R/G/B values for a character based on the associated flags.
+        /// </summary>
+        /// <param name="ch">Character to color.</param>
+        /// <returns>The colored version of the character.</returns>
+        private Character ColorCharacter(Character ch)
+        {
+            var ret = new Character(ch);
+            if (ret.Inverse)
+            {
+                // NB: leaves the inverse bit on background, shouldn't matter.
+                ret.Foreground = ch.Background;
+                ret.Background = ch.Foreground;
+            }
+
+            if (ch.HasBasicForegroundColor)
+            {
+                ret.Foreground = this.GetColorInfoFromBasicColor(ret.ForegroundColor, ret.ForegroundBright);
+            }
+            if (ch.HasBasicBackgroundColor)
+            {
+                ret.Background = this.GetColorInfoFromBasicColor(ret.BackgroundColor, ret.BackgroundBright);
+            }
+
+            return ret;
+        }
+
+        private Character.ColorInfo GetColorInfoFromBasicColor(short basicColor, bool isBright)
+        {
+            var paletteOffset = isBright ? 8 : 0;
+            switch (basicColor)
+            {
+            case Character.Black:
+                return this.Palette[0 + paletteOffset];
+            case Character.Red:
+                return this.Palette[1 + paletteOffset];
+            case Character.Green:
+                return this.Palette[2 + paletteOffset];
+            case Character.Yellow:
+                return this.Palette[3 + paletteOffset];
+            case Character.Blue:
+                return this.Palette[4 + paletteOffset];
+            case Character.Magenta:
+                return this.Palette[5 + paletteOffset];
+            case Character.Cyan:
+                return this.Palette[6 + paletteOffset];
+            case Character.White:
+                return this.Palette[7 + paletteOffset];
+            default:
+                throw new InvalidOperationException("Unexpected color value.");
             }
         }
 

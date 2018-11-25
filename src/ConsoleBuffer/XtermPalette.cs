@@ -301,7 +301,7 @@ namespace ConsoleBuffer
             this.colorPalette = new Character.ColorInfo[this.DefaultPalette.Length];
             foreach (var c in this.DefaultPalette)
             {
-                var colorInfo = new Character.ColorInfo { R = c.R, G = c.G, B = c.B, Options = Character.Options.None };
+                var colorInfo = new Character.ColorInfo { R = c.R, G = c.G, B = c.B }; 
                 this.colorPalette[c.Id] = colorInfo;
                 this.colorNames[c.Name] = c.Id;
             }

@@ -19,6 +19,7 @@ namespace ConsoleBuffer
                 hintSize = previous.chars.Count;
             }
             lastCh.Glyph = 0x20;
+            lastCh.Options = lastCh.InheritedOptions;
 
             this.chars = new List<Character>(hintSize)
             {
@@ -51,6 +52,7 @@ namespace ConsoleBuffer
 
             var ch = this.chars[this.chars.Count - 1];
             ch.Glyph = 0x20;
+            ch.Options = ch.InheritedOptions;
             return ch;
         }
 
@@ -80,6 +82,7 @@ namespace ConsoleBuffer
         {
             var newChar = this.chars[this.chars.Count - 1];
             newChar.Glyph = 0x20;
+            newChar.Options = newChar.InheritedOptions;
             while (this.chars.Count <= pos)
             {
                 this.chars.Add(newChar);
