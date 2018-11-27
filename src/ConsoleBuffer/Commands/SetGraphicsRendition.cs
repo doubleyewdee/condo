@@ -24,15 +24,22 @@ namespace ConsoleBuffer.Commands
             None,
         }
 
+        public const Colors DefaultForegroundColor = Colors.White;
+        public const Colors DefaultBackgroundColor = Colors.Black;
+
         public bool HaveBasicForeground { get; private set; }
         public Colors BasicForegroundColor { get; private set; } = Colors.None;
         public bool HaveForeground { get; private set; }
         public Character.ColorInfo ForegroundColor { get; private set; }
+        public bool HaveXtermForeground { get; private set; }
+        public int XtermForegroundColor { get; private set; }
 
         public bool HaveBasicBackground { get; private set; }
         public Colors BasicBackgroundColor { get; private set; } = Colors.None;
         public bool HaveBackground { get; private set; }
         public Character.ColorInfo BackgroundColor { get; private set; }
+        public bool HaveXtermBackground { get; private set; }
+        public int XtermBackgroundColor { get; private set; }
 
         public FlagValue ForegroundBright { get; private set; }
         public FlagValue BackgroundBright { get; private set; }
@@ -69,7 +76,6 @@ namespace ConsoleBuffer.Commands
                 case 1:
                     this.ForegroundBright = FlagValue.Set;
                     break;
-                case 2:
                 case 22:
                     this.ForegroundBright = FlagValue.Unset;
                     break;
@@ -96,6 +102,19 @@ namespace ConsoleBuffer.Commands
                     this.HaveBasicForeground = true;
                     this.BasicForegroundColor = (Colors)(pValue - 30);
                     break;
+                case 38:
+                {
+                    if (this.ReadXtermColorIndex(p, out var idx))
+                    {
+                        this.HaveXtermForeground = true;
+                        this.XtermForegroundColor = idx;
+                    }
+                    break;
+                }
+                case 39:
+                    this.HaveBasicForeground = true;
+                    this.BasicForegroundColor = DefaultForegroundColor;
+                    break;
                 case 40:
                 case 41:
                 case 42:
@@ -106,6 +125,19 @@ namespace ConsoleBuffer.Commands
                 case 47:
                     this.HaveBasicBackground = true;
                     this.BasicBackgroundColor = (Colors)(pValue - 40);
+                    break;
+                case 48:
+                {
+                    if (this.ReadXtermColorIndex(p, out var idx))
+                    {
+                        this.HaveXtermBackground = true;
+                        this.XtermBackgroundColor = idx;
+                    }
+                    break;
+                }
+                case 49:
+                    this.HaveBasicBackground = true;
+                    this.BasicBackgroundColor = DefaultBackgroundColor;
                     break;
                 case 90:
                 case 91:
@@ -137,6 +169,32 @@ namespace ConsoleBuffer.Commands
             }
         }
 
+        private bool ReadXtermColorIndex(int p, out int value)
+        {
+            value = -1;
+            if (++p < this.Parameters.Count)
+            {
+                var subCommand = this.ParameterToNumber(p, defaultValue: -1);
+                if (subCommand == 5)
+                {
+                    if (++p < this.Parameters.Count)
+                    {
+                        value = this.ParameterToNumber(p, defaultValue: -1, maxValue: int.MaxValue);
+                        return value > -1 && value < 256;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void Reset()
+        {
+            this.ForegroundBright = this.BackgroundBright = this.Underline = this.Inverse = FlagValue.None;
+            this.HaveBasicForeground = this.HaveForeground = this.HaveXtermForeground = false;
+            this.HaveBasicBackground = this.HaveBackground = this.HaveXtermBackground = false;
+        }
+
         private void SetDefault()
         {
             this.ForegroundBright = FlagValue.Unset;
@@ -145,8 +203,8 @@ namespace ConsoleBuffer.Commands
             this.Inverse = FlagValue.Unset;
             this.HaveForeground = this.HaveBackground = false;
             this.HaveBasicForeground = this.HaveBasicBackground = true;
-            this.BasicForegroundColor = Colors.White;
-            this.BasicBackgroundColor = Colors.Black;
+            this.BasicForegroundColor = DefaultForegroundColor;
+            this.BasicBackgroundColor = DefaultBackgroundColor;
         }
 
         public override string ToString()

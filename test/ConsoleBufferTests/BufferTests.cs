@@ -69,7 +69,7 @@ namespace ConsoleBufferTests
         public void BrightForegroundText()
         {
             var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
-            buffer.AppendString("\x1b[1mbb\x1b[2mn\x1b[1mb\x1b[2mnnnn\n");
+            buffer.AppendString("\x1b[1mbb\x1b[22mn\x1b[1mb\x1b[22mnnnn\n");
             var surface = new RenderTest();
             surface.OnChar = (c, x, y) =>
             {

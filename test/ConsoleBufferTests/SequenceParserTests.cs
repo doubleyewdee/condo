@@ -223,7 +223,6 @@ namespace ConsoleBufferTests
 
         [TestMethod]
         [DataRow("1", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Set)]
-        [DataRow("2", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset)]
         [DataRow("22", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset)]
         public void SGRBold(string data, ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue expectedValue)
         {
@@ -311,6 +310,44 @@ namespace ConsoleBufferTests
             Assert.AreEqual(expectedBright ? ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Set :
                                              ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None,
                             cmd.BackgroundBright);
+        }
+
+        [TestMethod]
+        [DataRow("38;5", false, 0)]
+        [DataRow("38;5;", false, 0)]
+        [DataRow("38;5;-1", false, 0)]
+        [DataRow("38;5;0", true, 0)]
+        [DataRow("38;5;255", true, 255)]
+        [DataRow("38;5;256", false, 0)]
+        public void SGRXtermForeground(string data, bool haveXtermColor, int expectedValue)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(haveXtermColor, cmd.HaveXtermForeground);
+            if (haveXtermColor)
+            {
+                Assert.AreEqual(expectedValue, cmd.XtermForegroundColor);
+            }
+        }
+
+        [TestMethod]
+        [DataRow("48;5", false, 0)]
+        [DataRow("48;5;", false, 0)]
+        [DataRow("48;5;-1", false, 0)]
+        [DataRow("48;5;0", true, 0)]
+        [DataRow("48;5;255", true, 255)]
+        [DataRow("48;5;256", false, 0)]
+        public void SGRXtermBackground(string data, bool haveXtermColor, int expectedValue)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(haveXtermColor, cmd.HaveXtermBackground);
+            if (haveXtermColor)
+            {
+                Assert.AreEqual(expectedValue, cmd.XtermBackgroundColor);
+            }
         }
 
         private SequenceParser EnsureCommandParses(string command)
