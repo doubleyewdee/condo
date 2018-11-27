@@ -255,6 +255,64 @@ namespace ConsoleBufferTests
             Assert.AreEqual(expectedValue, cmd.Inverse);
         }
 
+        [TestMethod]
+        [DataRow("30", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, false)]
+        [DataRow("31", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Red, false)]
+        [DataRow("32", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Green, false)]
+        [DataRow("33", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Yellow, false)]
+        [DataRow("34", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Blue, false)]
+        [DataRow("35", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Magenta, false)]
+        [DataRow("36", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Cyan, false)]
+        [DataRow("37", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, false)]
+        [DataRow("90", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, true)]
+        [DataRow("91", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Red, true)]
+        [DataRow("92", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Green, true)]
+        [DataRow("93", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Yellow, true)]
+        [DataRow("94", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Blue, true)]
+        [DataRow("95", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Magenta, true)]
+        [DataRow("96", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Cyan, true)]
+        [DataRow("97", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, true)]
+        public void SGRBasicForegroundColors(string data, ConsoleBuffer.Commands.SetGraphicsRendition.Colors expectedColor, bool expectedBright)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.IsTrue(cmd.HaveBasicForeground);
+            Assert.AreEqual(expectedColor, cmd.BasicForegroundColor);
+            Assert.AreEqual(expectedBright ? ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Set :
+                                             ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None,
+                            cmd.ForegroundBright);
+        }
+
+        [TestMethod]
+        [DataRow("40", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, false)]
+        [DataRow("41", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Red, false)]
+        [DataRow("42", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Green, false)]
+        [DataRow("43", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Yellow, false)]
+        [DataRow("44", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Blue, false)]
+        [DataRow("45", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Magenta, false)]
+        [DataRow("46", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Cyan, false)]
+        [DataRow("47", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, false)]
+        [DataRow("100", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, true)]
+        [DataRow("101", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Red, true)]
+        [DataRow("102", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Green, true)]
+        [DataRow("103", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Yellow, true)]
+        [DataRow("104", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Blue, true)]
+        [DataRow("105", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Magenta, true)]
+        [DataRow("106", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Cyan, true)]
+        [DataRow("107", ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, true)]
+        public void SGRBasicBackgroundColors(string data, ConsoleBuffer.Commands.SetGraphicsRendition.Colors expectedColor, bool expectedBright)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.IsTrue(cmd.HaveBasicBackground);
+            Assert.AreEqual(expectedColor, cmd.BasicBackgroundColor);
+            Assert.AreEqual(expectedBright ? ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Set :
+                                             ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None,
+                            cmd.BackgroundBright);
+        }
+
         private SequenceParser EnsureCommandParses(string command)
         {
             var parser = new SequenceParser();
