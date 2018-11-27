@@ -1,16 +1,36 @@
 namespace condo
 {
     using System.ComponentModel;
+    using System.Security;
     using System.Windows;
     using ConsoleBuffer;
+    using Microsoft.Win32;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const int MinimumWindowsVersion = 17763;
         private ConsoleWrapper console;
         private KeyHandler keyHandler;
+
+        private bool IsOSVersionSupported()
+        {
+            try
+            {
+                using (var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion", false))
+                {
+                    if (key?.GetValue("CurrentBuildNumber") is string version && int.TryParse(version, out int currentBuild))
+                    {
+                        return currentBuild >= MinimumWindowsVersion;
+                    }
+                }
+            }
+            catch (SecurityException) { }
+
+            return false; 
+        }
 
         public MainWindow()
         {
@@ -20,6 +40,18 @@ namespace condo
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            if (!this.IsOSVersionSupported())
+            {
+                var msg = System.Text.Encoding.UTF8.GetBytes(
+                    "\x1b[2J\x1b[H" +
+                    "ConPTY APIs required for this application are not available.\r\n" +
+                    $"Please update to Windows 10 1809 (build {MinimumWindowsVersion}) or higher.\r\n" +
+                    "Press any key to exit.\r\n");
+                this.screen.Buffer.Append(msg, msg.Length);
+                this.KeyDown += (_, args) => this.Close();
+                return;
+            }
+
             this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
 
@@ -30,8 +62,7 @@ namespace condo
             // the debugger will attach above.
             if (!System.Diagnostics.Debugger.IsAttached)
 #endif
-            this.screen = new Screen(this.console.Buffer);
-            this.scrollViewer.Content = this.screen;
+            this.screen.Buffer = this.console.Buffer;
 
 #if DEBUG
             System.Diagnostics.Debugger.Launch();
