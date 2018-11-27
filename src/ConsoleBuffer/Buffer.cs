@@ -18,6 +18,7 @@ namespace ConsoleBuffer
         private long receivedCharacters;
         private long wrapCharacter;
         private int currentChar;
+        private Character characterTemplate = new Character { Glyph = 0x20 };
 
         /// <summary>
         /// we store X/Y as 0-offset indexes for convenience. escape codes will pass these around as 1-offset (top left is 1,1)
@@ -72,17 +73,11 @@ namespace ConsoleBuffer
             this.CursorVisible = this.CursorBlink = true;
             this.cursorX = this.cursorY = 0;
 
-            var defaultChar = new Character()
-            {
-                Options = Character.BasicColorOptions(Commands.SetGraphicsRendition.Colors.White, Commands.SetGraphicsRendition.Colors.Black),
-                Glyph = 0x20,
-            };
+            this.HandleSGR(new Commands.SetGraphicsRendition(string.Empty));
 
             for (var y = 0; y < this.Height; ++y)
             {
-                var line = new Line(null);
-                line.Set(0, defaultChar);
-                this.lines.PushBack(line);
+                this.lines.PushBack(new Line());
             }
             this.topVisibleLine = 0;
             this.bottomVisibleLine = this.MaxCursorY;
@@ -152,30 +147,9 @@ namespace ConsoleBuffer
                 this.wrapCharacter = -1;
             }
 
-            // if we have an explicit value for the current cell hold on to it, otherwise inherit from the previous cell since
-            // we don't know what other activity has been done with cursor shuffling/SGR/etc.
-            var cell = this.lines[this.CurrentLine].Get(this.cursorX);
-            if (cell.ForegroundExplicit || cell.BackgroundExplicit || (this.cursorX == 0 && this.cursorY == 0))
-            {
-                cell = this.ColorCharacter(cell);
-                cell.Glyph = ch;
-                this.lines[this.CurrentLine].Set(this.cursorX, cell);
-            }
-            else
-            {
-                var x = this.cursorX;
-                var y = this.cursorY;
-                if (x == 0)
-                {
-                    --y;
-                    x = this.MaxCursorX;
-                }
-                var line = this.lines[this.topVisibleLine + y];
-                var inheritChar = line.Get(x);
-                inheritChar = this.ColorCharacter(inheritChar);
-                inheritChar.Glyph = ch;
-                this.lines[this.CurrentLine].Set(this.cursorX, inheritChar);
-            }
+            var newChar = this.characterTemplate;
+            newChar.Glyph = ch;
+            this.lines[this.CurrentLine].Set(this.cursorX, newChar);
 
             if (this.cursorX == this.MaxCursorX)
             {
@@ -405,11 +379,51 @@ namespace ConsoleBuffer
 
         private void HandleSGR(Commands.SetGraphicsRendition sgr)
         {
-            var updatedCell = this.lines[this.CurrentLine].Get(this.cursorX);
-            if (sgr.ForegroundBright == Commands.SetGraphicsRendition.FlagValue.Set) updatedCell.Options |= Character.ForegroundBrightFlag;
-            if (sgr.ForegroundBright == Commands.SetGraphicsRendition.FlagValue.Unset) updatedCell.Options &= ~Character.ForegroundBrightFlag;
+            var newTemplate = this.characterTemplate;
 
-            this.lines[this.CurrentLine].Set(this.cursorX, updatedCell);
+            if (sgr.ForegroundBright == Commands.SetGraphicsRendition.FlagValue.Set) newTemplate.Options |= Character.ForegroundBrightFlag;
+            if (sgr.ForegroundBright == Commands.SetGraphicsRendition.FlagValue.Unset) newTemplate.Options &= ~Character.ForegroundBrightFlag;
+            if (sgr.BackgroundBright == Commands.SetGraphicsRendition.FlagValue.Set) newTemplate.Options |= Character.BackgroundBrightFlag;
+            if (sgr.BackgroundBright == Commands.SetGraphicsRendition.FlagValue.Unset) newTemplate.Options &= ~Character.BackgroundBrightFlag;
+            if (sgr.Underline == Commands.SetGraphicsRendition.FlagValue.Set) newTemplate.Options |= Character.UnderlineFlag;
+            if (sgr.Underline == Commands.SetGraphicsRendition.FlagValue.Unset) newTemplate.Options &= ~Character.UnderlineFlag;
+            if (sgr.Inverse == Commands.SetGraphicsRendition.FlagValue.Set) newTemplate.Options |= Character.InverseFlag;
+            if (sgr.Inverse == Commands.SetGraphicsRendition.FlagValue.Unset) newTemplate.Options &= ~Character.InverseFlag;
+
+            if (sgr.HaveBasicForeground)
+            {
+                newTemplate.Options &= ~Character.ForegroundExtendedFlag;
+                newTemplate.Options |= Character.ForegroundBasicColorFlag;
+                newTemplate.Options &= ~Character.ForegroundColorMask;
+                newTemplate.Options |= Character.GetColorFlags(sgr.BasicForegroundColor, false);
+            }
+            else if (sgr.HaveForeground)
+            {
+                newTemplate.Options &= ~Character.ForegroundBasicColorFlag;
+                newTemplate.Options &= ~Character.ForegroundColorMask;
+                newTemplate.Options |= Character.ForegroundExtendedFlag;
+                newTemplate.Foreground = sgr.ForegroundColor;
+            }
+
+            if (sgr.HaveBasicBackground)
+            {
+                newTemplate.Options &= ~Character.BackgroundExtendedFlag;
+                newTemplate.Options |= Character.BackgroundBasicColorFlag;
+                newTemplate.Options &= ~Character.BackgroundColorMask;
+                newTemplate.Options |= Character.GetColorFlags(sgr.BasicBackgroundColor, true);
+            }
+            else if (sgr.HaveBackground)
+            {
+                newTemplate.Options &= ~Character.BackgroundBasicColorFlag;
+                newTemplate.Options &= ~Character.BackgroundColorMask;
+                newTemplate.Options |= Character.BackgroundExtendedFlag;
+                newTemplate.Background = sgr.BackgroundColor;
+            }
+
+            if (newTemplate.HasBasicForegroundColor) newTemplate.Foreground = this.GetColorInfoFromBasicColor(newTemplate.BasicForegroundColor, newTemplate.ForegroundBright);
+            if (newTemplate.HasBasicBackgroundColor) newTemplate.Background = this.GetColorInfoFromBasicColor(newTemplate.BasicBackgroundColor, newTemplate.BackgroundBright);
+
+            this.characterTemplate = newTemplate;
         }
 
         private void HandleSetMode(Commands.SetMode sm)
@@ -436,7 +450,7 @@ namespace ConsoleBuffer
                 --lines;
                 if (this.bottomVisibleLine == this.lines.Capacity - 1)
                 {
-                    this.lines.PushBack(new Line(this.lines[this.bottomVisibleLine])); // will force an old line from the buffer;
+                    this.lines.PushBack(new Line()); // will force an old line from the buffer;
                 }
                 else
                 {
@@ -444,37 +458,10 @@ namespace ConsoleBuffer
                     ++this.bottomVisibleLine;
                     if (this.lines.Size <= this.bottomVisibleLine)
                     {
-                        this.lines.PushBack(new Line(this.lines[this.bottomVisibleLine - 1]));
+                        this.lines.PushBack(new Line());
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Fills in the R/G/B values for a character based on the associated flags.
-        /// </summary>
-        /// <param name="ch">Character to color.</param>
-        /// <returns>The colored version of the character.</returns>
-        private Character ColorCharacter(Character ch)
-        {
-            var ret = new Character(ch);
-            if (ret.Inverse)
-            {
-                // NB: leaves the inverse bit on background, shouldn't matter.
-                ret.Foreground = ch.Background;
-                ret.Background = ch.Foreground;
-            }
-
-            if (ch.HasBasicForegroundColor)
-            {
-                ret.Foreground = this.GetColorInfoFromBasicColor(ret.BasicForegroundColor, ret.ForegroundBright);
-            }
-            if (ch.HasBasicBackgroundColor)
-            {
-                ret.Background = this.GetColorInfoFromBasicColor(ret.BasicBackgroundColor, ret.BackgroundBright);
-            }
-
-            return ret;
         }
 
         private Character.ColorInfo GetColorInfoFromBasicColor(Commands.SetGraphicsRendition.Colors basicColor, bool isBright)

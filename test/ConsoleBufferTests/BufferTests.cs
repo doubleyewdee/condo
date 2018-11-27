@@ -69,16 +69,44 @@ namespace ConsoleBufferTests
         public void BrightForegroundText()
         {
             var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
-            buffer.AppendString("\x1b[1mhello\n");
+            buffer.AppendString("\x1b[1mbb\x1b[2mn\x1b[1mb\x1b[2mnnnn\n");
             var surface = new RenderTest();
             surface.OnChar = (c, x, y) =>
             {
-                if (c.Glyph != 0x20)
-                {
-                    Assert.AreEqual(buffer.Palette["white"], c.Foreground);
-                }
+                if (c.Glyph == 'b') Assert.AreEqual(buffer.Palette["white"], c.Foreground);
+                if (c.Glyph == 'n') Assert.AreEqual(buffer.Palette["silver"], c.Foreground);
             };
             buffer.Render(surface);
+        }
+
+        [TestMethod]
+        public void BasicColorTest()
+        {
+            var surface = new RenderTest();
+
+            var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
+            for (var fg = 0; fg < 16; ++fg)
+            {
+                for (var bg = 0; bg < 16; ++bg)
+                {
+                    buffer.AppendString("\x1b[2J\x1b[m");
+                    buffer.AppendString("\x1b[");
+                    if (fg < 8) buffer.AppendString($"3{fg}");
+                    else buffer.AppendString($"9{fg - 8}");
+                    if (bg < 8) buffer.AppendString($";4{bg}m");
+                    else buffer.AppendString($";10{bg - 8}m");
+                    buffer.AppendString("c\r\n");
+
+                    surface.OnChar = (c, x, y) =>
+                    {
+                        if (c.Glyph != 'c') return;
+                        Assert.AreEqual(buffer.Palette[fg], c.Foreground);
+                        Assert.AreEqual(buffer.Palette[bg], c.Background);
+                    };
+
+                    buffer.Render(surface);
+                }
+            }
         }
     }
 }

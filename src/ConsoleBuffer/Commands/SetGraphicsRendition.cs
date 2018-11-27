@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace ConsoleBuffer.Commands
 {
     public sealed class SetGraphicsRendition : ControlSequence
@@ -39,6 +41,11 @@ namespace ConsoleBuffer.Commands
 
         public SetGraphicsRendition(string bufferData) : base(bufferData)
         {
+#if DEBUG
+            // XXX: remove later.
+            Trace.WriteLine($"SGR: ^[[{bufferData}m");
+#endif
+
             this.ForegroundBright = FlagValue.None;
             this.BackgroundBright = FlagValue.None;
             this.Underline = FlagValue.None;
@@ -53,7 +60,8 @@ namespace ConsoleBuffer.Commands
             var p = 0;
             while (p < this.Parameters.Count)
             {
-                switch (this.ParameterToNumber(p, defaultValue: -1))
+                var pValue = this.ParameterToNumber(p, defaultValue: -1);
+                switch (pValue)
                 {
                 case 0:
                     this.SetDefault();
@@ -64,6 +72,64 @@ namespace ConsoleBuffer.Commands
                 case 2:
                 case 22:
                     this.ForegroundBright = FlagValue.Unset;
+                    break;
+                case 4:
+                    this.Underline = FlagValue.Set;
+                    break;
+                case 24:
+                    this.Underline = FlagValue.Unset;
+                    break;
+                case 7:
+                    this.Inverse = FlagValue.Set;
+                    break;
+                case 27:
+                    this.Inverse = FlagValue.Unset;
+                    break;
+                case 30:
+                case 31:
+                case 32:
+                case 33:
+                case 34:
+                case 35:
+                case 36:
+                case 37:
+                    this.HaveBasicForeground = true;
+                    this.BasicForegroundColor = (Colors)(pValue - 30);
+                    break;
+                case 40:
+                case 41:
+                case 42:
+                case 43:
+                case 44:
+                case 45:
+                case 46:
+                case 47:
+                    this.HaveBasicBackground = true;
+                    this.BasicBackgroundColor = (Colors)(pValue - 40);
+                    break;
+                case 90:
+                case 91:
+                case 92:
+                case 93:
+                case 94:
+                case 95:
+                case 96:
+                case 97:
+                    this.HaveBasicForeground = true;
+                    this.ForegroundBright = FlagValue.Set; // XXX: idk if this is right
+                    this.BasicForegroundColor = (Colors)(pValue - 90);
+                    break;
+                case 100:
+                case 101:
+                case 102:
+                case 103:
+                case 104:
+                case 105:
+                case 106:
+                case 107:
+                    this.HaveBasicBackground = true;
+                    this.BackgroundBright = FlagValue.Set; // same as above.
+                    this.BasicBackgroundColor = (Colors)(pValue - 100);
                     break;
                 }
 
@@ -81,6 +147,11 @@ namespace ConsoleBuffer.Commands
             this.HaveBasicForeground = this.HaveBasicBackground = true;
             this.BasicForegroundColor = Colors.White;
             this.BasicBackgroundColor = Colors.Black;
+        }
+
+        public override string ToString()
+        {
+            return $"^[[{string.Join(";", this.Parameters)}m";
         }
     }
 }

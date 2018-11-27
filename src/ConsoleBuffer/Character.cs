@@ -1,6 +1,7 @@
 namespace ConsoleBuffer
 {
     using System;
+    using System.Text;
 
     // XXX: Gonna end up with a lot of these and they're really freakin' big.
     // could consider a morphable type with different sizes to avoid the (currently) 12 bytes-per-character issue.
@@ -25,9 +26,9 @@ namespace ConsoleBuffer
 
         // traditional colors occupy 3 bits, we keep two sets (foreground + background).
         // the actual colors are declared in the SGR command.
-        private const short ForegroundColorMask = 0x0007;
+        internal const short ForegroundColorMask = 0x0007;
         private const short BackgroundBitShift = 3;
-        private const short BackgroundColorMask = ForegroundColorMask << BackgroundBitShift;
+        internal const short BackgroundColorMask = ForegroundColorMask << BackgroundBitShift;
         // flags
         internal const short ForegroundBasicColorFlag = 0x0001 << 6;
         internal const short BackgroundBasicColorFlag = 0x0002 << 6;
@@ -35,83 +36,55 @@ namespace ConsoleBuffer
         internal const short BackgroundBrightFlag = 0x0008 << 6;
         internal const short UnderlineFlag = 0x0010 << 6;
         internal const short InverseFlag = 0x0020 << 6;
-        internal const short ForegroundExplicitFlag = 0x0040 << 6;
-        internal const short BackgroundExplicitFlag = 0x0080 << 6;
-        internal const short ExplicitFlags = (ForegroundExplicitFlag | BackgroundBrightFlag);
-        internal const short ForegroundExtendedFlag = 0x0100 << 6;
-        internal const short BackgroundExtendedFlag = unchecked((short)(0x0200 << 6));
+        internal const short ForegroundExtendedFlag = 0x0040 << 6;
+        internal const short BackgroundExtendedFlag = 0x0080 << 6;
 
         internal short Options;
 
-        internal static short BasicColorOptions(Commands.SetGraphicsRendition.Colors foreground = Commands.SetGraphicsRendition.Colors.None,
-                                                Commands.SetGraphicsRendition.Colors background = Commands.SetGraphicsRendition.Colors.None)
+        internal static short GetColorFlags(Commands.SetGraphicsRendition.Colors color, bool background)
         {
-            short options = 0;
-            if (foreground != Commands.SetGraphicsRendition.Colors.None)
+            var options = (short)color;
+#if DEBUG
+            if (options < (short)Commands.SetGraphicsRendition.Colors.Black || options > (short)Commands.SetGraphicsRendition.Colors.White)
             {
-                options |= (short)((short)foreground | ForegroundExplicitFlag | ForegroundBasicColorFlag);
+                throw new ArgumentOutOfRangeException(nameof(color));
             }
-            if (background != Commands.SetGraphicsRendition.Colors.None)
-            {
-                options |= (short)(((short)background << BackgroundBitShift) | BackgroundExplicitFlag | BackgroundBasicColorFlag);
-            }
+#endif
 
-            return options;
+            return background ? (short)(options << BackgroundBitShift) : options;
         }
 
         internal Commands.SetGraphicsRendition.Colors BasicForegroundColor => (Commands.SetGraphicsRendition.Colors)(this.Options & ForegroundColorMask);
         internal bool HasBasicForegroundColor => (this.Options & ForegroundBasicColorFlag) != 0;
-        internal Commands.SetGraphicsRendition.Colors BasicBackgroundColor => (Commands.SetGraphicsRendition.Colors)(this.Options & BackgroundColorMask);
+        internal Commands.SetGraphicsRendition.Colors BasicBackgroundColor => (Commands.SetGraphicsRendition.Colors)((this.Options & BackgroundColorMask) >> BackgroundBitShift);
         internal bool HasBasicBackgroundColor => (this.Options & BackgroundBasicColorFlag) != 0;
         internal bool ForegroundBright => (this.Options & ForegroundBrightFlag) != 0;
         internal bool BackgroundBright => (this.Options & BackgroundBrightFlag) != 0;
-        internal bool Underline => (this.Options & UnderlineFlag) != 0;
+        // this is the only property we cannot handle rendering of internally by setting appropriate RGB color values.
+        public bool Underline => (this.Options & UnderlineFlag) != 0;
         internal bool Inverse => (this.Options & InverseFlag) != 0;
-        internal bool ForegroundExplicit => (this.Options & ForegroundExplicitFlag) != 0;
-        internal bool BackgroundExplicit => (this.Options & BackgroundExplicitFlag) != 0;
         internal bool ForegroundExtended => (this.Options & ForegroundExtendedFlag) != 0;
         internal bool BackgroundExtended => (this.Options & BackgroundExtendedFlag) != 0;
-
-        internal short InheritedOptions => (short)(this.Options & ~(ForegroundExplicitFlag | BackgroundExplicitFlag));
 
         /// <summary>
         /// The unicode glyph for this character.
         /// </summary>
         public int Glyph { get; set; } // XXX: a single int isn't sufficient to represent emoji with ZWJ. fix later.
 
-        public Character(Character parent)
+        public override string ToString()
         {
-            this.Foreground = parent.Foreground;
-            this.Background = parent.Background;
-            this.Glyph = parent.Glyph;
-            this.Options = parent.Options;
-            this.Options &= ~ExplicitFlags;
-        }
-
-        public Character(Character parent, Commands.SetGraphicsRendition sgr)
-            : this(parent)
-        {
-            switch (sgr.ForegroundBright)
-            {
-            case Commands.SetGraphicsRendition.FlagValue.Set:
-                this.Options |= (ForegroundBrightFlag | ForegroundExplicitFlag);
-                break;
-            case Commands.SetGraphicsRendition.FlagValue.Unset:
-                this.Options &= ~ForegroundBrightFlag;
-                this.Options |= ForegroundExplicitFlag;
-                break;
-            }
-
-            switch (sgr.BackgroundBright)
-            {
-            case Commands.SetGraphicsRendition.FlagValue.Set:
-                this.Options |= (BackgroundBrightFlag | BackgroundExplicitFlag);
-                break;
-            case Commands.SetGraphicsRendition.FlagValue.Unset:
-                this.Options &= ~BackgroundBrightFlag;
-                this.Options |= BackgroundExplicitFlag;
-                break;
-            }
+            var sb = new StringBuilder();
+            sb.Append($"'{(char)this.Glyph}' (opt:");
+            if (this.ForegroundBright) sb.Append(" bright");
+            if (this.Underline) sb.Append(" ul");
+            if (this.Inverse) sb.Append(" inv");
+            if (this.BackgroundBright) sb.Append(" bgBright");
+            if (this.HasBasicForegroundColor) sb.Append($" fg:{this.BasicForegroundColor}");
+            if (this.HasBasicBackgroundColor) sb.Append($" bg:{this.BasicBackgroundColor}");
+            if (this.ForegroundExtended) sb.Append($" efg:#{this.Foreground.R:x2}{this.Foreground.G:x2}{this.Foreground.B:x2}");
+            if (this.BackgroundExtended) sb.Append($" ebg:#{this.Background.R:x2}{this.Background.G:x2}{this.Background.B:x2}");
+            sb.Append(')');
+            return sb.ToString();
         }
     }
 }

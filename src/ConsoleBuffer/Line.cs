@@ -8,23 +8,10 @@ namespace ConsoleBuffer
     {
         private readonly List<Character> chars;
 
-        public Line(Line previous)
+        public Line()
         {
             var hintSize = 80;
-            // our first character should inherit attributes of the last line's character.
-            var lastCh = new Character();
-            if (previous != null)
-            {
-                lastCh = previous.chars[previous.chars.Count - 1];
-                hintSize = previous.chars.Count;
-            }
-            lastCh.Glyph = 0x20;
-            lastCh.Options = lastCh.InheritedOptions;
-
-            this.chars = new List<Character>(hintSize)
-            {
-                lastCh
-            };
+            this.chars = new List<Character>(hintSize);
         }
 
         /// <summary>
@@ -50,10 +37,7 @@ namespace ConsoleBuffer
                 return this.chars[pos];
             }
 
-            var ch = this.chars[this.chars.Count - 1];
-            ch.Glyph = 0x20;
-            ch.Options = ch.InheritedOptions;
-            return ch;
+            return new Character { Glyph = 0x20 };
         }
 
         /// <summary>
@@ -80,12 +64,9 @@ namespace ConsoleBuffer
 
         private void Extend(int pos)
         {
-            var newChar = this.chars[this.chars.Count - 1];
-            newChar.Glyph = 0x20;
-            newChar.Options = newChar.InheritedOptions;
             while (this.chars.Count <= pos)
             {
-                this.chars.Add(newChar);
+                this.chars.Add(new Character { Glyph = 0x20 });
             }
         }
 

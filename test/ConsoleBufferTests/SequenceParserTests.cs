@@ -233,6 +233,28 @@ namespace ConsoleBufferTests
             Assert.AreEqual(expectedValue, cmd.ForegroundBright);
         }
 
+        [TestMethod]
+        [DataRow("4", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Set)]
+        [DataRow("24", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset)]
+        public void SGRUnderline(string data, ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue expectedValue)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(expectedValue, cmd.Underline);
+        }
+
+        [TestMethod]
+        [DataRow("7", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Set)]
+        [DataRow("27", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset)]
+        public void SGRInverse(string data, ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue expectedValue)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(expectedValue, cmd.Inverse);
+        }
+
         private SequenceParser EnsureCommandParses(string command)
         {
             var parser = new SequenceParser();
