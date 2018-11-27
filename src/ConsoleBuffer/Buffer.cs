@@ -2,6 +2,7 @@ namespace ConsoleBuffer
 {
     using System;
     using System.ComponentModel;
+    using System.Text;
 
     public sealed class Buffer : INotifyPropertyChanged
     {
@@ -35,7 +36,7 @@ namespace ConsoleBuffer
         /// <summary>
         /// The xterm palette to use when mapping color names/offsets to RGB values in characters.
         /// </summary>
-        public XtermPalette Palette { get; set; }
+        public XtermPalette Palette { get; set; } = XtermPalette.Default;
 
         private int topVisibleLine;
         private int bottomVisibleLine;
@@ -62,7 +63,7 @@ namespace ConsoleBuffer
         /// </summary>
         public int BufferSize { get { return this.lines.Size; } }
 
-        public string Title { get; private set; }
+        public string Title { get; private set; } = string.Empty;
 
         public Buffer(short width, short height)
         {
@@ -73,7 +74,7 @@ namespace ConsoleBuffer
 
             var defaultChar = new Character()
             {
-                Options = Character.BasicColorOptions(Character.White, Character.Black),
+                Options = Character.BasicColorOptions(Commands.SetGraphicsRendition.Colors.White, Commands.SetGraphicsRendition.Colors.Black),
                 Glyph = 0x20,
             };
 
@@ -85,6 +86,15 @@ namespace ConsoleBuffer
             }
             this.topVisibleLine = 0;
             this.bottomVisibleLine = this.MaxCursorY;
+        }
+
+        /// <summary>
+        /// Append the given string to the buffer. The string will be converted to UTF8 and then written to the buffer as usual.
+        /// </summary>
+        public void AppendString(string str)
+        {
+            var strBytes = Encoding.UTF8.GetBytes(str);
+            this.Append(strBytes, strBytes.Length);
         }
 
         public void Append(byte[] bytes, int length)
@@ -395,7 +405,11 @@ namespace ConsoleBuffer
 
         private void HandleSGR(Commands.SetGraphicsRendition sgr)
         {
+            var updatedCell = this.lines[this.CurrentLine].Get(this.cursorX);
+            if (sgr.ForegroundBright == Commands.SetGraphicsRendition.FlagValue.Set) updatedCell.Options |= Character.ForegroundBrightFlag;
+            if (sgr.ForegroundBright == Commands.SetGraphicsRendition.FlagValue.Unset) updatedCell.Options &= ~Character.ForegroundBrightFlag;
 
+            this.lines[this.CurrentLine].Set(this.cursorX, updatedCell);
         }
 
         private void HandleSetMode(Commands.SetMode sm)
@@ -453,36 +467,36 @@ namespace ConsoleBuffer
 
             if (ch.HasBasicForegroundColor)
             {
-                ret.Foreground = this.GetColorInfoFromBasicColor(ret.ForegroundColor, ret.ForegroundBright);
+                ret.Foreground = this.GetColorInfoFromBasicColor(ret.BasicForegroundColor, ret.ForegroundBright);
             }
             if (ch.HasBasicBackgroundColor)
             {
-                ret.Background = this.GetColorInfoFromBasicColor(ret.BackgroundColor, ret.BackgroundBright);
+                ret.Background = this.GetColorInfoFromBasicColor(ret.BasicBackgroundColor, ret.BackgroundBright);
             }
 
             return ret;
         }
 
-        private Character.ColorInfo GetColorInfoFromBasicColor(short basicColor, bool isBright)
+        private Character.ColorInfo GetColorInfoFromBasicColor(Commands.SetGraphicsRendition.Colors basicColor, bool isBright)
         {
             var paletteOffset = isBright ? 8 : 0;
             switch (basicColor)
             {
-            case Character.Black:
+            case Commands.SetGraphicsRendition.Colors.Black:
                 return this.Palette[0 + paletteOffset];
-            case Character.Red:
+            case Commands.SetGraphicsRendition.Colors.Red:
                 return this.Palette[1 + paletteOffset];
-            case Character.Green:
+            case Commands.SetGraphicsRendition.Colors.Green:
                 return this.Palette[2 + paletteOffset];
-            case Character.Yellow:
+            case Commands.SetGraphicsRendition.Colors.Yellow:
                 return this.Palette[3 + paletteOffset];
-            case Character.Blue:
+            case Commands.SetGraphicsRendition.Colors.Blue:
                 return this.Palette[4 + paletteOffset];
-            case Character.Magenta:
+            case Commands.SetGraphicsRendition.Colors.Magenta:
                 return this.Palette[5 + paletteOffset];
-            case Character.Cyan:
+            case Commands.SetGraphicsRendition.Colors.Cyan:
                 return this.Palette[6 + paletteOffset];
-            case Character.White:
+            case Commands.SetGraphicsRendition.Colors.White:
                 return this.Palette[7 + paletteOffset];
             default:
                 throw new InvalidOperationException("Unexpected color value.");

@@ -31,7 +31,7 @@ namespace condo
             }
         }
 
-        private readonly XtermPalette palette = new XtermPalette();
+        private readonly XtermPalette palette = XtermPalette.Default;
 
         private VisualCollection cells;
         private DpiScale dpiInfo;

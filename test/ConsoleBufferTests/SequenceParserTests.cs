@@ -4,7 +4,7 @@ namespace ConsoleBufferTests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
-    public class SequenceParserTests
+    public sealed class SequenceParserTests
     {
         [TestMethod]
         public void Basic()
@@ -177,6 +177,28 @@ namespace ConsoleBufferTests
         }
 
         [TestMethod]
+        [DataRow("-1")]
+        public void SGRInvalid(string data)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.IsFalse(cmd.HaveForeground);
+            Assert.AreEqual(new Character.ColorInfo(), cmd.ForegroundColor);
+            Assert.IsFalse(cmd.HaveBackground);
+            Assert.AreEqual(new Character.ColorInfo(), cmd.BackgroundColor);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.ForegroundBright);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.BackgroundBright);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Underline);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Inverse);
+
+            Assert.IsFalse(cmd.HaveBasicForeground);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.None, cmd.BasicForegroundColor);
+            Assert.IsFalse(cmd.HaveBasicBackground);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.None, cmd.BasicBackgroundColor);
+        }
+
+        [TestMethod]
         [DataRow("0")]
         [DataRow("")]
         public void SGRReset(string data)
@@ -188,9 +210,27 @@ namespace ConsoleBufferTests
             Assert.AreEqual(new Character.ColorInfo(), cmd.ForegroundColor);
             Assert.IsFalse(cmd.HaveBackground);
             Assert.AreEqual(new Character.ColorInfo(), cmd.BackgroundColor);
-            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Bold);
-            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Underline);
-            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.None, cmd.Inverse);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset, cmd.ForegroundBright);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset, cmd.BackgroundBright);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset, cmd.Underline);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset, cmd.Inverse);
+
+            Assert.IsTrue(cmd.HaveBasicForeground);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, cmd.BasicForegroundColor);
+            Assert.IsTrue(cmd.HaveBasicBackground);
+            Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, cmd.BasicBackgroundColor);
+        }
+
+        [TestMethod]
+        [DataRow("1", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Set)]
+        [DataRow("2", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset)]
+        [DataRow("22", ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue.Unset)]
+        public void SGRBold(string data, ConsoleBuffer.Commands.SetGraphicsRendition.FlagValue expectedValue)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(expectedValue, cmd.ForegroundBright);
         }
 
         private SequenceParser EnsureCommandParses(string command)

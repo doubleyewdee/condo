@@ -8,6 +8,8 @@ namespace ConsoleBuffer
     /// </summary>
     public sealed class XtermPalette
     {
+        public static readonly XtermPalette Default = new XtermPalette();
+
         private struct XtermColor
         {
             public int Id;

@@ -2,7 +2,6 @@ namespace ConsoleBuffer.Commands
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
 
     public abstract class ControlSequence : Base
     {
@@ -39,6 +38,7 @@ namespace ConsoleBuffer.Commands
         public bool IsExtended { get; private set; }
         protected IList<string> Parameters { get; private set; }
         protected ControlSequence(string bufferData) : base(bufferData) { }
+
         protected override void Parse(string bufferData)
         {
             if (bufferData.Length == 0)
