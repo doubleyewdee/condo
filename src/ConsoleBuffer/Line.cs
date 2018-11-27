@@ -8,6 +8,8 @@ namespace ConsoleBuffer
     {
         private readonly List<Character> chars;
 
+        public int Length => this.chars.Count;
+
         public Line()
         {
             var hintSize = 80;
@@ -52,14 +54,6 @@ namespace ConsoleBuffer
             var current = this.chars[pos];
             current.Glyph = glyph;
             this.chars[pos] = current;
-        }
-
-        public void Clear()
-        {
-            for (var x = 0; x < this.chars.Count; ++x)
-            {
-                this.SetGlyph(x, 0x20);
-            }
         }
 
         private void Extend(int pos)

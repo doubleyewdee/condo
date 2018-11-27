@@ -298,7 +298,9 @@ namespace ConsoleBuffer
             var x = this.cursorX;
             for (var c = 0; c < ech.Count; ++c)
             {
-                this.lines[y].SetGlyph(x, 0x20);
+                var eraseChar = this.characterTemplate;
+                eraseChar.Glyph = 0x20;
+                this.lines[y].Set(x, eraseChar);
                 ++x;
                 if (x == this.Width)
                 {
@@ -332,9 +334,14 @@ namespace ConsoleBuffer
                 return;
             }
 
+            var eraseChar = this.characterTemplate;
+            eraseChar.Glyph = 0x20;
             for (var y = startY; y <= endY; ++y)
             {
-                this.lines[y].Clear();
+                for (var x = 0; x < this.lines[y].Length; ++x)
+                {
+                    this.lines[y].Set(x, eraseChar);
+                }
             }
         }
 
@@ -359,9 +366,11 @@ namespace ConsoleBuffer
                 return;
             }
 
+            var eraseChar = this.characterTemplate;
+            eraseChar.Glyph = 0x20;
             for (var x = startX; x <= endX; ++x)
             {
-                this.lines[this.CurrentLine].SetGlyph(x, 0x20);
+                this.lines[this.CurrentLine].Set(x, eraseChar);
             }
         }
 
