@@ -319,7 +319,7 @@ namespace ConsoleBufferTests
         [DataRow("38;5;0", true, 0)]
         [DataRow("38;5;255", true, 255)]
         [DataRow("38;5;256", false, 0)]
-        public void SGRXtermForeground(string data, bool haveXtermColor, int expectedValue)
+        public void SGRXtermForegroundIndex(string data, bool haveXtermColor, int expectedValue)
         {
             var parser = this.EnsureCommandParses($"\x1b[{data}m");
             var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
@@ -327,6 +327,9 @@ namespace ConsoleBufferTests
             Assert.AreEqual(haveXtermColor, cmd.HaveXtermForeground);
             if (haveXtermColor)
             {
+                Assert.IsFalse(cmd.HaveBasicForeground);
+                Assert.IsFalse(cmd.HaveForeground);
+                Assert.IsTrue(cmd.HaveXtermForeground);
                 Assert.AreEqual(expectedValue, cmd.XtermForegroundColor);
             }
         }
@@ -338,7 +341,7 @@ namespace ConsoleBufferTests
         [DataRow("48;5;0", true, 0)]
         [DataRow("48;5;255", true, 255)]
         [DataRow("48;5;256", false, 0)]
-        public void SGRXtermBackground(string data, bool haveXtermColor, int expectedValue)
+        public void SGRXtermBackgroundIndex(string data, bool haveXtermColor, int expectedValue)
         {
             var parser = this.EnsureCommandParses($"\x1b[{data}m");
             var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
@@ -346,7 +349,58 @@ namespace ConsoleBufferTests
             Assert.AreEqual(haveXtermColor, cmd.HaveXtermBackground);
             if (haveXtermColor)
             {
+                Assert.IsFalse(cmd.HaveBasicBackground);
+                Assert.IsFalse(cmd.HaveBackground);
+                Assert.IsTrue(cmd.HaveXtermBackground);
                 Assert.AreEqual(expectedValue, cmd.XtermBackgroundColor);
+            }
+        }
+
+        [TestMethod]
+        [DataRow("38;2", false, 0, 0, 0)]
+        [DataRow("38;2;", false, 0, 0, 0)]
+        [DataRow("38;2;1", false, 0, 0, 0)]
+        [DataRow("38;2;1;2", false, 0, 0, 0)]
+        [DataRow("38;2;1;2;", false, 0, 0, 0)]
+        [DataRow("38;2;1;2;3", true, 1, 2, 3)]
+        [DataRow("38;2;0;0;0", true, 0, 0, 0)]
+        [DataRow("38;2;255;255;255", true, 255, 255, 255)]
+        public void SGRXtermForegroundRGB(string data, bool haveColor, int r, int g, int b)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(haveColor, cmd.HaveForeground);
+            if (haveColor)
+            {
+                Assert.IsFalse(cmd.HaveBasicForeground);
+                Assert.IsFalse(cmd.HaveXtermForeground);
+                Assert.IsTrue(cmd.HaveForeground);
+                Assert.AreEqual(new Character.ColorInfo { R = (byte)r, G = (byte)g, B = (byte)b }, cmd.ForegroundColor);
+            }
+        }
+
+        [TestMethod]
+        [DataRow("48;2", false, 0, 0, 0)]
+        [DataRow("48;2;", false, 0, 0, 0)]
+        [DataRow("48;2;1", false, 0, 0, 0)]
+        [DataRow("48;2;1;2", false, 0, 0, 0)]
+        [DataRow("48;2;1;2;", false, 0, 0, 0)]
+        [DataRow("48;2;1;2;3", true, 1, 2, 3)]
+        [DataRow("48;2;0;0;0", true, 0, 0, 0)]
+        [DataRow("48;2;255;255;255", true, 255, 255, 255)]
+        public void SGRXtermBackgroundRGB(string data, bool haveColor, int r, int g, int b)
+        {
+            var parser = this.EnsureCommandParses($"\x1b[{data}m");
+            var cmd = parser.Command as ConsoleBuffer.Commands.SetGraphicsRendition;
+            Assert.IsNotNull(cmd);
+            Assert.AreEqual(haveColor, cmd.HaveBackground);
+            if (haveColor)
+            {
+                Assert.IsFalse(cmd.HaveBasicBackground);
+                Assert.IsFalse(cmd.HaveXtermBackground);
+                Assert.IsTrue(cmd.HaveBackground);
+                Assert.AreEqual(new Character.ColorInfo { R = (byte)r, G = (byte)g, B = (byte)b }, cmd.BackgroundColor);
             }
         }
 

@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="MainWindow" SizeToContent="WidthAndHeight">
     <Grid Background="Black">
-        <ScrollViewer Name="scrollViewer" CanContentScroll="true" IsDeferredScrollingEnabled="true">
+        <ScrollViewer Name="scrollViewer" CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False">
             <local:Screen x:Name="screen" />
         </ScrollViewer>
     </Grid>

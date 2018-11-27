@@ -401,34 +401,29 @@ namespace ConsoleBuffer
 
             if (sgr.HaveBasicForeground)
             {
-                newTemplate.Options &= ~Character.ForegroundExtendedFlag;
-                newTemplate.Options |= Character.ForegroundBasicColorFlag;
-                newTemplate.Options &= ~Character.ForegroundColorMask;
-                newTemplate.Options |= Character.GetColorFlags(sgr.BasicForegroundColor, false);
+                newTemplate.Options &= ~(Character.ForegroundExtendedFlag | Character.ForegroundColorMask);
+                newTemplate.Options |= (short)(Character.ForegroundBasicColorFlag | Character.GetColorFlags(sgr.BasicForegroundColor, false));
             }
-            else if (sgr.HaveForeground)
+            else if (sgr.HaveForeground || sgr.HaveXtermForeground)
             {
-                newTemplate.Options &= ~Character.ForegroundBasicColorFlag;
-                newTemplate.Options &= ~Character.ForegroundColorMask;
+                newTemplate.Options &= ~(Character.ForegroundBasicColorFlag | Character.ForegroundColorMask);
                 newTemplate.Options |= Character.ForegroundExtendedFlag;
-                newTemplate.Foreground = sgr.ForegroundColor;
+                newTemplate.Foreground = (sgr.HaveXtermForeground ? this.Palette[sgr.XtermForegroundColor] : sgr.ForegroundColor);
             }
 
             if (sgr.HaveBasicBackground)
             {
-                newTemplate.Options &= ~Character.BackgroundExtendedFlag;
-                newTemplate.Options |= Character.BackgroundBasicColorFlag;
-                newTemplate.Options &= ~Character.BackgroundColorMask;
-                newTemplate.Options |= Character.GetColorFlags(sgr.BasicBackgroundColor, true);
+                newTemplate.Options &= ~(Character.BackgroundExtendedFlag | Character.BackgroundColorMask);
+                newTemplate.Options |= (short)(Character.BackgroundBasicColorFlag | Character.GetColorFlags(sgr.BasicBackgroundColor, true));
             }
-            else if (sgr.HaveBackground)
+            else if (sgr.HaveBackground || sgr.HaveXtermBackground)
             {
-                newTemplate.Options &= ~Character.BackgroundBasicColorFlag;
-                newTemplate.Options &= ~Character.BackgroundColorMask;
+                newTemplate.Options &= ~(Character.BackgroundBasicColorFlag | Character.BackgroundColorMask);
                 newTemplate.Options |= Character.BackgroundExtendedFlag;
-                newTemplate.Background = sgr.BackgroundColor;
+                newTemplate.Background = (sgr.HaveXtermBackground ? this.Palette[sgr.XtermBackgroundColor] : sgr.BackgroundColor);
             }
 
+            // we need to set these down here because they are impacted by the 'bright' bit.
             if (newTemplate.HasBasicForegroundColor) newTemplate.Foreground = this.GetColorInfoFromBasicColor(newTemplate.BasicForegroundColor, newTemplate.ForegroundBright);
             if (newTemplate.HasBasicBackgroundColor) newTemplate.Background = this.GetColorInfoFromBasicColor(newTemplate.BasicBackgroundColor, newTemplate.BackgroundBright);
 

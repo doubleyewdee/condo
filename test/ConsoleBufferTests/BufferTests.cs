@@ -80,11 +80,11 @@ namespace ConsoleBufferTests
         }
 
         [TestMethod]
-        public void BasicColorTest()
+        public void BasicColor()
         {
             var surface = new RenderTest();
-
             var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
+
             for (var fg = 0; fg < 16; ++fg)
             {
                 for (var bg = 0; bg < 16; ++bg)
@@ -106,6 +106,32 @@ namespace ConsoleBufferTests
 
                     buffer.Render(surface);
                 }
+            }
+        }
+
+        [TestMethod]
+        public void XtermColorIndex()
+        {
+            var surface = new RenderTest();
+            var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
+
+            for (var i = 0;i < 256; ++i)
+            {
+                buffer.AppendString($"\x1b[2J\x1b[H\x1b[38;5;{i}mc");
+                surface.OnChar = (c, x, y) =>
+                {
+                    if (c.Glyph != 'c') return;
+                    Assert.AreEqual(buffer.Palette[i], c.Foreground);
+                };
+                buffer.Render(surface);
+
+                buffer.AppendString($"\x1b[2J\x1b[H\x1b[48;5;{i}mc");
+                surface.OnChar = (c, x, y) =>
+                {
+                    if (c.Glyph != 'c') return;
+                    Assert.AreEqual(buffer.Palette[i], c.Background);
+                };
+                buffer.Render(surface);
             }
         }
     }

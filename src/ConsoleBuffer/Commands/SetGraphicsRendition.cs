@@ -48,11 +48,6 @@ namespace ConsoleBuffer.Commands
 
         public SetGraphicsRendition(string bufferData) : base(bufferData)
         {
-#if DEBUG
-            // XXX: remove later.
-            Trace.WriteLine($"SGR: ^[[{bufferData}m");
-#endif
-
             this.ForegroundBright = FlagValue.None;
             this.BackgroundBright = FlagValue.None;
             this.Underline = FlagValue.None;
@@ -104,12 +99,22 @@ namespace ConsoleBuffer.Commands
                     break;
                 case 38:
                 {
-                    if (this.ReadXtermColorIndex(p, out var idx))
+                    if (this.ReadXtermColorInfo(ref p, out var idx, out var color))
                     {
-                        this.HaveXtermForeground = true;
-                        this.XtermForegroundColor = idx;
+                        if (idx > -1)
+                        {
+                            this.HaveXtermForeground = true;
+                            this.XtermForegroundColor = idx;
+                        }
+                        else
+                        {
+                            this.HaveForeground = true;
+                            this.ForegroundColor = color;
+                        }
+                        break;
                     }
-                    break;
+                    this.Reset();
+                    return;
                 }
                 case 39:
                     this.HaveBasicForeground = true;
@@ -128,12 +133,22 @@ namespace ConsoleBuffer.Commands
                     break;
                 case 48:
                 {
-                    if (this.ReadXtermColorIndex(p, out var idx))
+                    if (this.ReadXtermColorInfo(ref p, out var idx, out var color))
                     {
-                        this.HaveXtermBackground = true;
-                        this.XtermBackgroundColor = idx;
+                        if (idx > -1)
+                        {
+                            this.HaveXtermBackground = true;
+                            this.XtermBackgroundColor = idx;
+                        }
+                        else
+                        {
+                            this.HaveBackground = true;
+                            this.BackgroundColor = color;
+                        }
+                        break;
                     }
-                    break;
+                    this.Reset();
+                    return;
                 }
                 case 49:
                     this.HaveBasicBackground = true;
@@ -169,19 +184,33 @@ namespace ConsoleBuffer.Commands
             }
         }
 
-        private bool ReadXtermColorIndex(int p, out int value)
+        private bool ReadXtermColorInfo(ref int p, out int value, out Character.ColorInfo color)
         {
             value = -1;
+            color = new Character.ColorInfo();
             if (++p < this.Parameters.Count)
             {
                 var subCommand = this.ParameterToNumber(p, defaultValue: -1);
-                if (subCommand == 5)
+                if (subCommand == 2)
                 {
-                    if (++p < this.Parameters.Count)
+                    var colorValues = new int[3];
+                    for (var i = 0; i < colorValues.Length; ++i) // prime candidate for funrolling of loops
                     {
-                        value = this.ParameterToNumber(p, defaultValue: -1, maxValue: int.MaxValue);
-                        return value > -1 && value < 256;
+                        ++p;
+                        colorValues[i] = this.ParameterToNumber(p, defaultValue: -1, maxValue: int.MaxValue);
+                        if (colorValues[i] < 0 || colorValues[i] > 255)
+                        {
+                            return false;
+                        }
                     }
+                    color = new Character.ColorInfo { R = (byte)colorValues[0], G = (byte)colorValues[1], B = (byte)colorValues[2] };
+                    return true;
+                }
+                else if (subCommand == 5)
+                {
+                    ++p;
+                    value = this.ParameterToNumber(p, defaultValue: -1, maxValue: int.MaxValue);
+                    return value > -1 && value < 256;
                 }
             }
 
