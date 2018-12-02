@@ -58,6 +58,7 @@
     </ApplicationDefinition>
     <Compile Include="KeyHandler.cs" />
     <Compile Include="Screen.cs" />
+    <Compile Include="SolidBrushCache.cs" />
     <Compile Include="TerminalManager.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
