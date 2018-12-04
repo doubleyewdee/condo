@@ -45,6 +45,7 @@ namespace condo
         bool cursorInverted;
         private volatile int shouldRedraw;
         private int consoleBufferSize;
+        private SolidBrushCache brushCache = new SolidBrushCache();
 
         private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(10);
         private readonly Stopwatch redrawWatch = new Stopwatch();
@@ -192,7 +193,7 @@ namespace condo
 
         public void SetCellCharacter(int x, int y, bool invert = false)
         {
-            var ch = this.characters[x, y];
+            var ch = this.characters[x,y];
 
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
@@ -208,8 +209,8 @@ namespace condo
                         this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
                 }
 
-                var backgroundBrush = new SolidColorBrush(new Color { R = ch.Background.R, G = ch.Background.G, B = ch.Background.B, A = 255 });
-                var foregroundBrush = new SolidColorBrush(new Color { R = ch.Foreground.R, G = ch.Foreground.G, B = ch.Foreground.B, A = 255 });
+                var backgroundBrush = this.brushCache.GetBrush(ch.Background.R, ch.Background.G, ch.Background.B);
+                var foregroundBrush = this.brushCache.GetBrush(ch.Foreground.R, ch.Foreground.G, ch.Foreground.B);
                 dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
                 dc.DrawGlyphRun(!invert ? foregroundBrush : backgroundBrush, gr);
             }
@@ -217,7 +218,7 @@ namespace condo
 
         public void RenderCharacter(Character c, int x, int y)
         {
-            this.characters[x, y] = c;
+            this.characters[x,y] = c;
         }
 
         private void Redraw()
@@ -231,7 +232,7 @@ namespace condo
             }
         }
 
-        #region IScrollInfo
+#region IScrollInfo
         public bool CanVerticallyScroll { get; set; }
         public bool CanHorizontallyScroll { get; set; }
 
@@ -318,6 +319,6 @@ namespace condo
         {
             throw new NotImplementedException();
         }
-        #endregion
+#endregion
     }
 }
