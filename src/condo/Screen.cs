@@ -58,6 +58,7 @@ namespace condo
         private readonly double cellWidth, cellHeight;
         private readonly Point baselineOrigin;
         private readonly Rect cellRectangle;
+        private readonly GuidelineSet cellGuidelines;
         private int horizontalCells, verticalCells;
         private DrawCharacter[,] characters;
         bool cursorInverted;
@@ -95,6 +96,8 @@ namespace condo
             this.cellHeight = this.typeface.Height * this.fontSize;
             this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSize);
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
+            this.cellGuidelines = new GuidelineSet(new[] { this.cellRectangle.Left, this.cellRectangle.Right }, new[] { this.cellRectangle.Top, this.cellRectangle.Bottom });
+            this.cellGuidelines.Freeze();
 
             this.Buffer = buffer;
             this.cursorBlinkWatch.Start();
@@ -212,9 +215,12 @@ namespace condo
 
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
+                var backgroundRectangle = new Rect(0, 0, this.cellWidth, this.cellHeight);
+                var gs = new GuidelineSet();
+                dc.PushGuidelineSet(this.cellGuidelines);
                 var backgroundBrush = this.brushCache.GetBrush(ch.Background.R, ch.Background.G, ch.Background.B);
                 var foregroundBrush = this.brushCache.GetBrush(ch.Foreground.R, ch.Foreground.G, ch.Foreground.B);
-                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
+                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, this.cellRectangle);
 
                 if (ch.Foreground == ch.Background) return; // no need to draw same color glyph.
 

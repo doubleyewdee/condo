@@ -18,7 +18,7 @@ namespace ConsoleBuffer
         private long receivedCharacters;
         private long wrapCharacter;
         private int currentChar;
-        private Character characterTemplate = new Character { Glyph = 0x20, };
+        private Character characterTemplate = new Character { Glyph = 0x20 };
 
         /// <summary>
         /// we store X/Y as 0-offset indexes for convenience. escape codes will pass these around as 1-offset (top left is 1,1)
