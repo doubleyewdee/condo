@@ -8,13 +8,39 @@ namespace ConsoleBuffer
     // on a 'normal' 80x25 terminal the current buffer alone is just >23kB. A 160 character wide buffer with a 32k
     // line scrollback is nearly 60MB. Per buffer. Not an issue now but something we should care about and fix in
     // the future.
-    public struct Character
+    public struct Character : IEquatable<Character>
     {
-        public struct ColorInfo
+        public struct ColorInfo : IEquatable<ColorInfo>
         {
             public byte R;
             public byte G;
             public byte B;
+
+            public bool Equals(ColorInfo other)
+            {
+                return (this.R == other.R && this.G == other.G && this.B == other.B);
+            }
+
+            public static bool operator ==(ColorInfo c1, ColorInfo c2)
+            {
+                return c1.Equals(c2);
+            }
+
+            public static bool operator !=(ColorInfo c1, ColorInfo c2)
+            {
+                return !c1.Equals(c2);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is ColorInfo other ? other.Equals(this) : false;
+            }
+
+            public override int GetHashCode()
+            {
+                return (this.R + this.G << 8 + this.B << 16);
+            }
+
             public override string ToString()
             {
                 return $"#{this.R:x2}{this.G:x2}{this.B:x2}";
@@ -85,6 +111,34 @@ namespace ConsoleBuffer
             if (this.BackgroundExtended) sb.Append($" ebg:#{this.Background.R:x2}{this.Background.G:x2}{this.Background.B:x2}");
             sb.Append(')');
             return sb.ToString();
+        }
+
+        public bool Equals(Character other)
+        {
+            return this.Foreground == other.Foreground && this.Background == other.Background && this.Glyph == other.Glyph;
+        }
+
+        public static bool operator ==(Character c1, Character c2)
+        {
+            return c1.Equals(c2);
+        }
+
+        public static bool operator !=(Character c1, Character c2)
+        {
+            return !c1.Equals(c2);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Character other ? other.Equals(this) : false;
+        }
+
+        public override int GetHashCode()
+        {
+            var hash = 5309 * this.Glyph;
+            hash = hash * 47 + this.Foreground.GetHashCode();
+            hash = hash * 47 + this.Background.GetHashCode();
+            return hash;
         }
     }
 }

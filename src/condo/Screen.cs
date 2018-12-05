@@ -1,7 +1,6 @@
 namespace condo
 {
     using System;
-    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Windows;
@@ -13,6 +12,12 @@ namespace condo
 
     public sealed class Screen : FrameworkElement, IRenderTarget, IScrollInfo
     {
+        private struct DrawCharacter
+        {
+            public bool Changed;
+            public Character Character;
+        }
+
         private ConsoleBuffer.Buffer buffer;
         public ConsoleBuffer.Buffer Buffer
         {
@@ -41,13 +46,13 @@ namespace condo
         private readonly Point baselineOrigin;
         private readonly Rect cellRectangle;
         private int horizontalCells, verticalCells;
-        private Character[,] characters;
+        private DrawCharacter[,] characters;
         bool cursorInverted;
         private volatile int shouldRedraw;
         private int consoleBufferSize;
         private SolidBrushCache brushCache = new SolidBrushCache();
 
-        private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(10);
+        private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(1000);
         private readonly Stopwatch redrawWatch = new Stopwatch();
         private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(250);
         private readonly Stopwatch cursorBlinkWatch = new Stopwatch();
@@ -169,7 +174,7 @@ namespace condo
 
             this.horizontalCells = this.Buffer.Width;
             this.verticalCells = this.Buffer.Height;
-            this.characters = new Character[this.Buffer.Width, this.Buffer.Height];
+            this.characters = new DrawCharacter[this.Buffer.Width, this.Buffer.Height];
 
             for (var y = 0; y < this.verticalCells; ++y)
             {
@@ -193,7 +198,7 @@ namespace condo
 
         public void SetCellCharacter(int x, int y, bool invert = false)
         {
-            var ch = this.characters[x,y];
+            var ch = this.characters[x, y].Character;
 
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
@@ -214,7 +219,11 @@ namespace condo
 
         public void RenderCharacter(Character c, int x, int y)
         {
-            this.characters[x,y] = c;
+            if (c != this.characters[x, y].Character)
+            {
+                this.characters[x, y].Changed = true;
+                this.characters[x, y].Character = c;
+            }
         }
 
         private void Redraw()
@@ -224,6 +233,7 @@ namespace condo
                 for (var y = 0; y < this.Buffer.Height; ++y)
                 {
                     this.SetCellCharacter(x, y);
+                    this.characters[x, y].Changed = false;
                 }
             }
         }
