@@ -10,18 +10,6 @@ but for a light overview:
   really. The UWP platform has some issues with UWP apps being able to invoke external processes.
   This needs some work from the console/Windows/UWP teams (I guess?) to address this for now.
 
-## Color Management
-In deciding how to manage the delta between rendering a "presentation-free" buffer in the library
-and leacving presentation to the application it made sense to support the "xterm palette." A user
-can provide a palette to the buffer, which will be used when characters are rendered to set the
-appropriate RGB values for either "classic" (16 color) terminals or 256 color palette xterm values.
-This means that the RGB values are always set by the library for the rendering library to use as
-desired. Given that more than one escape sequence can reference color palettes in a plethora of
-ways this felt like the most appropriate choice.
-
-As a consequence of this decision, however, runtime palette changes won't be reflected in text
-that has already been rendered. This can be considered a feature or a bug, depending on your mood.
-
 ## Dev notes
 
 Some cool sites I've found while putting this together.
