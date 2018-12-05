@@ -198,17 +198,20 @@ namespace condo
 
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
+                var backgroundBrush = this.brushCache.GetBrush(ch.Background.R, ch.Background.G, ch.Background.B);
+                var foregroundBrush = this.brushCache.GetBrush(ch.Foreground.R, ch.Foreground.G, ch.Foreground.B);
+                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
+
+                if (ch.Foreground == ch.Background) return; // no need to draw same color glyph.
+
                 GlyphRun gr;
-                if (!this.typeface.CharacterToGlyphMap.TryGetValue((char)ch.Glyph, out ushort glyphValue))
+                if (!this.typeface.CharacterToGlyphMap.TryGetValue((char)ch.Glyph, out var glyphValue))
                 {
                     glyphValue = 0;
                 }
                 gr = new GlyphRun(this.typeface, 0, false, this.fontSize, (float)this.dpiInfo.PixelsPerDip, new[] { glyphValue },
                     this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
 
-                var backgroundBrush = this.brushCache.GetBrush(ch.Background.R, ch.Background.G, ch.Background.B);
-                var foregroundBrush = this.brushCache.GetBrush(ch.Foreground.R, ch.Foreground.G, ch.Foreground.B);
-                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, new Rect(new Point(0, 0), new Point(this.cellWidth, this.cellHeight)));
                 dc.DrawGlyphRun(!invert ? foregroundBrush : backgroundBrush, gr);
             }
         }
