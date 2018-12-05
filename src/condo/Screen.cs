@@ -52,8 +52,6 @@ namespace condo
         private int consoleBufferSize;
         private SolidBrushCache brushCache = new SolidBrushCache();
 
-        private static readonly TimeSpan MaxRedrawFrequency = TimeSpan.FromMilliseconds(1000);
-        private readonly Stopwatch redrawWatch = new Stopwatch();
         private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(250);
         private readonly Stopwatch cursorBlinkWatch = new Stopwatch();
 
@@ -85,7 +83,6 @@ namespace condo
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
 
             this.Buffer = buffer;
-            this.redrawWatch.Start();
             this.cursorBlinkWatch.Start();
 
             CompositionTarget.Rendering += this.RenderFrame;
@@ -117,9 +114,8 @@ namespace condo
 
         private void RenderFrame(object sender, EventArgs e)
         {
-            if (this.redrawWatch.Elapsed >= MaxRedrawFrequency && this.shouldRedraw != 0)
+            if (this.shouldRedraw != 0)
             {
-                this.redrawWatch.Restart();
                 this.shouldRedraw = 0;
 
                 // when rendering we should update our view of the buffer size, and if we were previously scrolled
