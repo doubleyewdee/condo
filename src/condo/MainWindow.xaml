@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:condo"
         mc:Ignorable="d"
         Title="MainWindow" SizeToContent="WidthAndHeight">
-    <Grid Background="Black">
+    <Grid>
         <ScrollViewer Name="scrollViewer" CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False">
             <local:Screen x:Name="screen" />
         </ScrollViewer>

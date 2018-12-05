@@ -18,7 +18,7 @@ namespace ConsoleBuffer
         private long receivedCharacters;
         private long wrapCharacter;
         private int currentChar;
-        private Character characterTemplate = new Character { Glyph = 0x20 };
+        private Character characterTemplate = new Character { Glyph = 0x20, };
 
         /// <summary>
         /// we store X/Y as 0-offset indexes for convenience. escape codes will pass these around as 1-offset (top left is 1,1)
@@ -491,6 +491,33 @@ namespace ConsoleBuffer
                 return this.Palette[7 + paletteOffset];
             default:
                 throw new InvalidOperationException("Unexpected color value.");
+            }
+        }
+
+        /// <summary>
+        /// Updates the colors of all cells in the buffer from the current palette if they have basic (16 color) values.
+        /// </summary>
+        public void UpdateBasicColorsFromPalette()
+        {
+            lock (this.renderLock)
+            {
+                for (var y = 0; y < this.BufferSize; ++y)
+                {
+                    var line = this.lines[y];
+                    for (var x = 0; x < line.Length; ++x)
+                    {
+                        var ch = line[x];
+                        if (ch.HasBasicBackgroundColor)
+                        {
+                            ch.Background = this.GetColorInfoFromBasicColor(ch.BasicBackgroundColor, ch.BackgroundBright);
+                        }
+                        if (ch.HasBasicForegroundColor)
+                        {
+                            ch.Foreground = this.GetColorInfoFromBasicColor(ch.BasicForegroundColor, ch.ForegroundBright);
+                        }
+                        line[x] = ch;
+                    }
+                }
             }
         }
 

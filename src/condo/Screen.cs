@@ -36,7 +36,20 @@ namespace condo
             }
         }
 
-        private readonly XtermPalette palette = XtermPalette.Default;
+        private XtermPalette palette = XtermPalette.Default;
+        public XtermPalette Palette
+        {
+            get
+            {
+                return this.palette;
+            }
+            set
+            {
+                this.palette = value;
+                this.buffer.Palette = this.palette;
+                this.buffer.UpdateBasicColorsFromPalette();
+            }
+        }
 
         private VisualCollection cells;
         private DpiScale dpiInfo;
@@ -71,6 +84,7 @@ namespace condo
 
         public Screen(ConsoleBuffer.Buffer buffer)
         {
+            this.UseLayoutRounding = true;
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
             this.cells = new VisualCollection(this);
             if (!new Typeface("Consolas").TryGetGlyphTypeface(out this.typeface))
