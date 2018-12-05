@@ -198,16 +198,12 @@ namespace condo
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
                 GlyphRun gr;
-                try
+                if (!this.typeface.CharacterToGlyphMap.TryGetValue((char)ch.Glyph, out ushort glyphValue))
                 {
-                    gr = new GlyphRun(this.typeface, 0, false, this.fontSize, (float)this.dpiInfo.PixelsPerDip, new[] { this.typeface.CharacterToGlyphMap[(char)ch.Glyph] },
-                        this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
+                    glyphValue = 0;
                 }
-                catch (KeyNotFoundException)
-                {
-                    gr = new GlyphRun(this.typeface, 0, false, this.fontSize, (float)this.dpiInfo.PixelsPerDip, new[] { this.typeface.CharacterToGlyphMap[0] },
-                        this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
-                }
+                gr = new GlyphRun(this.typeface, 0, false, this.fontSize, (float)this.dpiInfo.PixelsPerDip, new[] { glyphValue },
+                    this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
 
                 var backgroundBrush = this.brushCache.GetBrush(ch.Background.R, ch.Background.G, ch.Background.B);
                 var foregroundBrush = this.brushCache.GetBrush(ch.Foreground.R, ch.Foreground.G, ch.Foreground.B);
