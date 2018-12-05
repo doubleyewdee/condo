@@ -10,57 +10,37 @@ namespace ConsoleBuffer
 
         public int Length => this.chars.Count;
 
-        // XXX: should probably remove users of Get/Set and just have them call this for clarity.
-        public Character this[int pos] { get => this.Get(pos); set => this.Set(pos, value); }
+        /// <summary>
+        /// Provides the character at the given position, potentially extending the line or providing a suitable default if the position is beyond the current character count.
+        /// </summary>
+        /// <param name="pos">Position to retrieve.</param>
+        /// <returns>The character at the given position, or a suitable default if the position is beyond the current end of the line.</returns>
+        public Character this[int pos]
+        {
+            get
+            {
+                if (pos < this.chars.Count)
+                {
+                    return this.chars[pos];
+                }
+
+                // for short lines we can lazily keep the attributes (specifically background) from whatever our last character was, assuming we had one.
+                var ch = this.chars.Count > 0 ? this.chars[this.chars.Count - 1] : new Character { Options = Character.DefaultOptions };
+                ch.Glyph = 0x0;
+                return ch;
+            }
+            set
+            {
+                this.Extend(pos);
+                this.chars[pos] = value;
+            }
+        }
 
         public Line()
         {
             var hintSize = 80;
             this.chars = new List<Character>(hintSize);
-            this[0] = new Character { Glyph = 0x20, Options = Character.DefaultOptions };
-        }
-
-        /// <summary>
-        /// Set a character value at a specified position. If the line is not long enough it is extended with blanks.
-        /// </summary>
-        /// <param name="pos">Position to set.</param>
-        /// <param name="ch">Character value.</param>
-        public void Set(int pos, Character ch)
-        {
-            this.Extend(pos);
-            this.chars[pos] = ch;
-        }
-
-        /// <summary>
-        /// Get a character value at the specified position. If the line is not long enough an empty (space) character with the properties of the last character is returned.
-        /// </summary>
-        /// <param name="pos"></param>
-        /// <returns></returns>
-        public Character Get(int pos)
-        {
-            if (pos < this.chars.Count)
-            {
-                return this.chars[pos];
-            }
-
-            // for short lines we can lazily keep the attributes (specifically background) from whatever our last character was, assuming we had one.
-            var ch = this.chars.Count > 0 ? this.chars[this.chars.Count - 1] : new Character { Options = Character.DefaultOptions };
-            ch.Glyph = 0x20;
-            return ch;
-        }
-
-        /// <summary>
-        /// Set the glyph value at the given position while retaining existing properties.
-        /// </summary>
-        /// <param name="pos">Position in line.</param>
-        /// <param name="glyph">Value to store.</param>
-        public void SetGlyph(int pos, int glyph)
-        {
-            this.Extend(pos);
-
-            var current = this.chars[pos];
-            current.Glyph = glyph;
-            this.chars[pos] = current;
+            this[0] = new Character { Glyph = 0x0, Options = Character.DefaultOptions };
         }
 
         private void Extend(int pos)

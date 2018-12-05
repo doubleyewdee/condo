@@ -67,17 +67,22 @@ namespace ConsoleBuffer
         // traditional colors occupy 3 bits, we keep two sets (foreground + background).
         // the actual colors are declared in the SGR command.
         internal const short ForegroundColorMask = 0x0007;
-        private const short BackgroundBitShift = 3;
+        internal const short ForegroundBasicColorFlag = 0x0008;
+        private const short BackgroundBitShift = 4;
         internal const short BackgroundColorMask = ForegroundColorMask << BackgroundBitShift;
         // flags
-        internal const short ForegroundBasicColorFlag = 0x0001 << 6;
-        internal const short BackgroundBasicColorFlag = 0x0002 << 6;
-        internal const short ForegroundBrightFlag = 0x0004 << 6;
-        internal const short BackgroundBrightFlag = 0x0008 << 6;
-        internal const short UnderlineFlag = 0x0010 << 6;
-        internal const short InverseFlag = 0x0020 << 6;
-        internal const short ForegroundExtendedFlag = 0x0040 << 6;
-        internal const short BackgroundExtendedFlag = 0x0080 << 6;
+        internal const short BackgroundBasicColorFlag = 0x0080;
+        internal const short ForegroundBrightFlag = 0x0100;
+        internal const short BackgroundBrightFlag = 0x0200;
+        internal const short UnderlineFlag = 0x0400;
+        internal const short InverseFlag = 0x0800;
+        internal const short ForegroundXterm256Flag = 0x1000;
+        internal const short BackgroundXterm256Flag = 0x2000;
+        internal const short ForegroundRGBFlag = 0x4000;
+        internal const short BackgroundRGBFlag = unchecked((short)0x8000);
+
+        internal const short ForegroundColorFlags = (ForegroundBasicColorFlag | ForegroundXterm256Flag | ForegroundRGBFlag | ForegroundColorMask);
+        internal const short BackgroundColorFlags = (BackgroundBasicColorFlag | BackgroundXterm256Flag | BackgroundRGBFlag | BackgroundColorMask);
 
         internal const short DefaultOptions = (0x7 | ForegroundBasicColorFlag | BackgroundBasicColorFlag);
 
@@ -96,17 +101,23 @@ namespace ConsoleBuffer
             return background ? (short)(options << BackgroundBitShift) : options;
         }
 
-        internal Commands.SetGraphicsRendition.Colors BasicForegroundColor => (Commands.SetGraphicsRendition.Colors)(this.Options & ForegroundColorMask);
-        internal bool HasBasicForegroundColor => (this.Options & ForegroundBasicColorFlag) != 0;
-        internal Commands.SetGraphicsRendition.Colors BasicBackgroundColor => (Commands.SetGraphicsRendition.Colors)((this.Options & BackgroundColorMask) >> BackgroundBitShift);
-        internal bool HasBasicBackgroundColor => (this.Options & BackgroundBasicColorFlag) != 0;
-        internal bool ForegroundBright => (this.Options & ForegroundBrightFlag) != 0;
-        internal bool BackgroundBright => (this.Options & BackgroundBrightFlag) != 0;
-        // this is the only property we cannot handle rendering of internally by setting appropriate RGB color values.
+        public bool ForegroundBright => (this.Options & ForegroundBrightFlag) != 0;
+        public bool BackgroundBright => (this.Options & BackgroundBrightFlag) != 0;
         public bool Underline => (this.Options & UnderlineFlag) != 0;
-        internal bool Inverse => (this.Options & InverseFlag) != 0;
-        internal bool ForegroundExtended => (this.Options & ForegroundExtendedFlag) != 0;
-        internal bool BackgroundExtended => (this.Options & BackgroundExtendedFlag) != 0;
+        public bool Inverse => (this.Options & InverseFlag) != 0;
+
+        public bool ForegroundBasic => (this.Options & ForegroundBasicColorFlag) != 0;
+        public Commands.SetGraphicsRendition.Colors BasicForegroundColor =>
+            this.ForegroundBasic ? (Commands.SetGraphicsRendition.Colors)(this.Options & ForegroundColorMask) : Commands.SetGraphicsRendition.Colors.None;
+        public bool BackgroundBasic => (this.Options & BackgroundBasicColorFlag) != 0;
+        public Commands.SetGraphicsRendition.Colors BasicBackgroundColor =>
+            this.BackgroundBasic ? (Commands.SetGraphicsRendition.Colors)((this.Options & BackgroundColorMask) >> BackgroundBitShift) : Commands.SetGraphicsRendition.Colors.None;
+        public bool ForegroundXterm256 => (this.Options & ForegroundXterm256Flag) != 0;
+        public int ForegroundXterm256Index => this.ForegroundXterm256 ? this.Foreground.R : -1;
+        public bool BackgroundXterm256 => (this.Options & BackgroundXterm256Flag) != 0;
+        public int BackgroundXterm256Index => this.BackgroundXterm256 ? this.Background.R : -1;
+        public bool ForegroundRGB => (this.Options & ForegroundRGBFlag) != 0;
+        public bool BackgroundRGB => (this.Options & BackgroundRGBFlag) != 0;
 
         /// <summary>
         /// The unicode glyph for this character.
@@ -121,17 +132,19 @@ namespace ConsoleBuffer
             if (this.Underline) sb.Append(" ul");
             if (this.Inverse) sb.Append(" inv");
             if (this.BackgroundBright) sb.Append(" bgBright");
-            if (this.HasBasicForegroundColor) sb.Append($" fg:{this.BasicForegroundColor}");
-            if (this.HasBasicBackgroundColor) sb.Append($" bg:{this.BasicBackgroundColor}");
-            if (this.ForegroundExtended) sb.Append($" efg:#{this.Foreground.R:x2}{this.Foreground.G:x2}{this.Foreground.B:x2}");
-            if (this.BackgroundExtended) sb.Append($" ebg:#{this.Background.R:x2}{this.Background.G:x2}{this.Background.B:x2}");
+            if (this.ForegroundBasic) sb.Append($" fg:{this.BasicForegroundColor}");
+            if (this.BackgroundBasic) sb.Append($" bg:{this.BasicBackgroundColor}");
+            if (this.ForegroundXterm256) sb.Append($" xtfg:{this.Foreground.R}");
+            if (this.BackgroundXterm256) sb.Append($" xtbg:{this.Background.R}");
+            if (this.ForegroundRGB) sb.Append($" rgbfg:#{this.Foreground.R:x2}{this.Foreground.G:x2}{this.Foreground.B:x2}");
+            if (this.BackgroundRGB) sb.Append($" rgbbg:#{this.Background.R:x2}{this.Background.G:x2}{this.Background.B:x2}");
             sb.Append(')');
             return sb.ToString();
         }
 
         public bool Equals(Character other)
         {
-            return this.Foreground == other.Foreground && this.Background == other.Background && this.Glyph == other.Glyph;
+            return this.Options == other.Options && this.Foreground == other.Foreground && this.Background == other.Background && this.Glyph == other.Glyph;
         }
 
         public static bool operator ==(Character c1, Character c2)
@@ -152,6 +165,7 @@ namespace ConsoleBuffer
         public override int GetHashCode()
         {
             var hash = 5309 * this.Glyph;
+            hash = hash * 47 + this.Options;
             hash = hash * 47 + this.Foreground.GetHashCode();
             hash = hash * 47 + this.Background.GetHashCode();
             return hash;

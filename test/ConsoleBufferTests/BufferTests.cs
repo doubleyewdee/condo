@@ -31,7 +31,6 @@ namespace ConsoleBufferTests
             Assert.IsTrue(buffer.CursorBlink);
             Assert.AreEqual(string.Empty, buffer.Title);
             Assert.AreEqual(DefaultRows, buffer.BufferSize);
-            Assert.AreEqual(XtermPalette.Default, buffer.Palette);
         }
 
         [TestMethod]
@@ -44,8 +43,8 @@ namespace ConsoleBufferTests
             {
                 if (x == 0 && y == 0)
                 {
-                    Assert.AreEqual(XtermPalette.Default["silver"], c.Foreground);
-                    Assert.AreEqual(XtermPalette.Default["black"], c.Background);
+                    Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, c.BasicForegroundColor);
+                    Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, c.BasicBackgroundColor);
                 }
             };
             buffer.Render(surface);
@@ -73,8 +72,8 @@ namespace ConsoleBufferTests
             var surface = new RenderTest();
             surface.OnChar = (c, x, y) =>
             {
-                if (c.Glyph == 'b') Assert.AreEqual(buffer.Palette["white"], c.Foreground);
-                if (c.Glyph == 'n') Assert.AreEqual(buffer.Palette["silver"], c.Foreground);
+                if (c.Glyph == 'b') Assert.IsTrue(c.ForegroundBright);
+                if (c.Glyph == 'n') Assert.IsFalse(c.ForegroundBright);
             };
             buffer.Render(surface);
         }
@@ -100,8 +99,10 @@ namespace ConsoleBufferTests
                     surface.OnChar = (c, x, y) =>
                     {
                         if (c.Glyph != 'c') return;
-                        Assert.AreEqual(buffer.Palette[fg], c.Foreground);
-                        Assert.AreEqual(buffer.Palette[bg], c.Background);
+                        Assert.AreEqual(fg > 7, c.ForegroundBright);
+                        Assert.AreEqual(bg > 7, c.BackgroundBright);
+                        Assert.AreEqual((ConsoleBuffer.Commands.SetGraphicsRendition.Colors)(fg > 7 ? fg - 8 : fg), c.BasicForegroundColor);
+                        Assert.AreEqual((ConsoleBuffer.Commands.SetGraphicsRendition.Colors)(bg > 7 ? bg - 8 : bg), c.BasicBackgroundColor);
                     };
 
                     buffer.Render(surface);
@@ -121,7 +122,8 @@ namespace ConsoleBufferTests
                 surface.OnChar = (c, x, y) =>
                 {
                     if (c.Glyph != 'c') return;
-                    Assert.AreEqual(buffer.Palette[i], c.Foreground);
+                    Assert.IsTrue(c.ForegroundXterm256);
+                    Assert.AreEqual(i, c.ForegroundXterm256Index);
                 };
                 buffer.Render(surface);
 
@@ -129,7 +131,8 @@ namespace ConsoleBufferTests
                 surface.OnChar = (c, x, y) =>
                 {
                     if (c.Glyph != 'c') return;
-                    Assert.AreEqual(buffer.Palette[i], c.Background);
+                    Assert.IsTrue(c.BackgroundXterm256);
+                    Assert.AreEqual(i, c.BackgroundXterm256Index);
                 };
                 buffer.Render(surface);
             }

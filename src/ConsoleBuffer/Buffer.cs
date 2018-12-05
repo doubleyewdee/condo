@@ -18,7 +18,7 @@ namespace ConsoleBuffer
         private long receivedCharacters;
         private long wrapCharacter;
         private int currentChar;
-        private Character characterTemplate = new Character { Glyph = 0x20 };
+        private Character characterTemplate = new Character { Glyph = 0x0 };
 
         /// <summary>
         /// we store X/Y as 0-offset indexes for convenience. escape codes will pass these around as 1-offset (top left is 1,1)
@@ -33,11 +33,6 @@ namespace ConsoleBuffer
         /// True if the cursor should be blinking.
         /// </summary>
         public bool CursorBlink { get; private set; }
-
-        /// <summary>
-        /// The xterm palette to use when mapping color names/offsets to RGB values in characters.
-        /// </summary>
-        public XtermPalette Palette { get; set; } = XtermPalette.Default;
 
         private int topVisibleLine;
         private int bottomVisibleLine;
@@ -149,7 +144,7 @@ namespace ConsoleBuffer
 
             var newChar = this.characterTemplate;
             newChar.Glyph = ch;
-            this.lines[this.CurrentLine].Set(this.cursorX, newChar);
+            this.lines[this.CurrentLine][this.cursorX] = newChar;
 
             if (this.cursorX == this.MaxCursorX)
             {
@@ -299,8 +294,8 @@ namespace ConsoleBuffer
             for (var c = 0; c < ech.Count; ++c)
             {
                 var eraseChar = this.characterTemplate;
-                eraseChar.Glyph = 0x20;
-                this.lines[y].Set(x, eraseChar);
+                eraseChar.Glyph = 0x0;
+                this.lines[y][x] = eraseChar;
                 ++x;
                 if (x == this.Width)
                 {
@@ -335,12 +330,12 @@ namespace ConsoleBuffer
             }
 
             var eraseChar = this.characterTemplate;
-            eraseChar.Glyph = 0x20;
+            eraseChar.Glyph = 0x0;
             for (var y = startY; y <= endY; ++y)
             {
                 for (var x = 0; x < this.lines[y].Length; ++x)
                 {
-                    this.lines[y].Set(x, eraseChar);
+                    this.lines[y][x] = eraseChar;
                 }
             }
         }
@@ -367,10 +362,10 @@ namespace ConsoleBuffer
             }
 
             var eraseChar = this.characterTemplate;
-            eraseChar.Glyph = 0x20;
+            eraseChar.Glyph = 0x0;
             for (var x = startX; x <= endX; ++x)
             {
-                this.lines[this.CurrentLine].Set(x, eraseChar);
+                this.lines[this.CurrentLine][x] = eraseChar;
             }
         }
 
@@ -401,31 +396,39 @@ namespace ConsoleBuffer
 
             if (sgr.HaveBasicForeground)
             {
-                newTemplate.Options &= ~(Character.ForegroundExtendedFlag | Character.ForegroundColorMask);
+                newTemplate.Options &= ~Character.ForegroundColorFlags;
                 newTemplate.Options |= (short)(Character.ForegroundBasicColorFlag | Character.GetColorFlags(sgr.BasicForegroundColor, false));
             }
-            else if (sgr.HaveForeground || sgr.HaveXtermForeground)
+            else if (sgr.HaveXtermForeground)
+            {
+                newTemplate.Options &= ~Character.ForegroundColorFlags;
+                newTemplate.Options |= Character.ForegroundXterm256Flag;
+                newTemplate.Foreground = new Character.ColorInfo { R = (byte)sgr.XtermForegroundColor };
+            }
+            else if (sgr.HaveForeground)
             {
                 newTemplate.Options &= ~(Character.ForegroundBasicColorFlag | Character.ForegroundColorMask);
-                newTemplate.Options |= Character.ForegroundExtendedFlag;
-                newTemplate.Foreground = (sgr.HaveXtermForeground ? this.Palette[sgr.XtermForegroundColor] : sgr.ForegroundColor);
+                newTemplate.Options |= Character.ForegroundRGBFlag;
+                newTemplate.Foreground = sgr.ForegroundColor;
             }
 
             if (sgr.HaveBasicBackground)
             {
-                newTemplate.Options &= ~(Character.BackgroundExtendedFlag | Character.BackgroundColorMask);
+                newTemplate.Options &= ~Character.BackgroundColorFlags;
                 newTemplate.Options |= (short)(Character.BackgroundBasicColorFlag | Character.GetColorFlags(sgr.BasicBackgroundColor, true));
             }
-            else if (sgr.HaveBackground || sgr.HaveXtermBackground)
+            else if (sgr.HaveXtermBackground)
+            {
+                newTemplate.Options &= ~Character.BackgroundColorFlags;
+                newTemplate.Options |= Character.BackgroundXterm256Flag;
+                newTemplate.Background = new Character.ColorInfo { R = (byte)sgr.XtermBackgroundColor };
+            }
+            else if (sgr.HaveBackground)
             {
                 newTemplate.Options &= ~(Character.BackgroundBasicColorFlag | Character.BackgroundColorMask);
-                newTemplate.Options |= Character.BackgroundExtendedFlag;
-                newTemplate.Background = (sgr.HaveXtermBackground ? this.Palette[sgr.XtermBackgroundColor] : sgr.BackgroundColor);
+                newTemplate.Options |= Character.BackgroundRGBFlag;
+                newTemplate.Background = sgr.BackgroundColor;
             }
-
-            // we need to set these down here because they are impacted by the 'bright' bit.
-            if (newTemplate.HasBasicForegroundColor) newTemplate.Foreground = this.GetColorInfoFromBasicColor(newTemplate.BasicForegroundColor, newTemplate.ForegroundBright);
-            if (newTemplate.HasBasicBackgroundColor) newTemplate.Background = this.GetColorInfoFromBasicColor(newTemplate.BasicBackgroundColor, newTemplate.BackgroundBright);
 
             this.characterTemplate = newTemplate;
         }
@@ -468,59 +471,6 @@ namespace ConsoleBuffer
             }
         }
 
-        private Character.ColorInfo GetColorInfoFromBasicColor(Commands.SetGraphicsRendition.Colors basicColor, bool isBright)
-        {
-            var paletteOffset = isBright ? 8 : 0;
-            switch (basicColor)
-            {
-            case Commands.SetGraphicsRendition.Colors.Black:
-                return this.Palette[0 + paletteOffset];
-            case Commands.SetGraphicsRendition.Colors.Red:
-                return this.Palette[1 + paletteOffset];
-            case Commands.SetGraphicsRendition.Colors.Green:
-                return this.Palette[2 + paletteOffset];
-            case Commands.SetGraphicsRendition.Colors.Yellow:
-                return this.Palette[3 + paletteOffset];
-            case Commands.SetGraphicsRendition.Colors.Blue:
-                return this.Palette[4 + paletteOffset];
-            case Commands.SetGraphicsRendition.Colors.Magenta:
-                return this.Palette[5 + paletteOffset];
-            case Commands.SetGraphicsRendition.Colors.Cyan:
-                return this.Palette[6 + paletteOffset];
-            case Commands.SetGraphicsRendition.Colors.White:
-                return this.Palette[7 + paletteOffset];
-            default:
-                throw new InvalidOperationException("Unexpected color value.");
-            }
-        }
-
-        /// <summary>
-        /// Updates the colors of all cells in the buffer from the current palette if they have basic (16 color) values.
-        /// </summary>
-        public void UpdateBasicColorsFromPalette()
-        {
-            lock (this.renderLock)
-            {
-                for (var y = 0; y < this.BufferSize; ++y)
-                {
-                    var line = this.lines[y];
-                    for (var x = 0; x < line.Length; ++x)
-                    {
-                        var ch = line[x];
-                        if (ch.HasBasicBackgroundColor)
-                        {
-                            ch.Background = this.GetColorInfoFromBasicColor(ch.BasicBackgroundColor, ch.BackgroundBright);
-                        }
-                        if (ch.HasBasicForegroundColor)
-                        {
-                            ch.Foreground = this.GetColorInfoFromBasicColor(ch.BasicForegroundColor, ch.ForegroundBright);
-                        }
-                        line[x] = ch;
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// Render the currently "on-screen" area character-by-character onto the specified target.
         /// </summary>
@@ -556,7 +506,7 @@ namespace ConsoleBuffer
 
                     for (var x = 0; x < this.Width; ++x)
                     {
-                        target.RenderCharacter(line.Get(x), x, y);
+                        target.RenderCharacter(line[x], x, y);
                     }
                 }
             }

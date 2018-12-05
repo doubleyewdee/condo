@@ -32,7 +32,6 @@ namespace condo
                 this.buffer = value ?? throw new ArgumentNullException(nameof(value));
                 this.Resize();
                 this.buffer.PropertyChanged += this.OnBufferPropertyChanged;
-                this.buffer.Palette = this.palette;
             }
         }
 
@@ -46,8 +45,13 @@ namespace condo
             set
             {
                 this.palette = value;
-                this.buffer.Palette = this.palette;
-                this.buffer.UpdateBasicColorsFromPalette();
+                for (var x = 0; x < this.buffer.Width; ++x)
+                {
+                    for (var y = 0; y < this.buffer.Height; ++y)
+                    {
+                        this.characters[x, y].Changed = true;
+                    }
+                }
             }
         }
 
@@ -58,6 +62,8 @@ namespace condo
         private readonly double cellWidth, cellHeight;
         private readonly Point baselineOrigin;
         private readonly Rect cellRectangle;
+        private readonly double underlineY;
+        private readonly double underlineHeight;
         private readonly GuidelineSet cellGuidelines;
         private int horizontalCells, verticalCells;
         private DrawCharacter[,] characters;
@@ -77,15 +83,25 @@ namespace condo
 #if DEBUG
             for (var i = 0; i < 100; ++i)
             {
-                var line = System.Text.Encoding.UTF8.GetBytes($"line {i}\r\n");
-                this.Buffer.Append(line, line.Length);
+                switch (i % 4)
+                {
+                case 1:
+                    this.Buffer.AppendString("\x1b[1m");
+                    break;
+                case 2:
+                    this.Buffer.AppendString("\x1b[4m");
+                    break;
+                case 3:
+                    this.Buffer.AppendString("\x1b[7m");
+                    break;
+                }
+                this.Buffer.AppendString($"line {i}\x1b[m\r\n");
             }
 #endif
         }
 
         public Screen(ConsoleBuffer.Buffer buffer)
         {
-            this.UseLayoutRounding = true;
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
             this.cells = new VisualCollection(this);
             if (!new Typeface("Consolas").TryGetGlyphTypeface(out this.typeface))
@@ -95,8 +111,12 @@ namespace condo
             this.cellWidth = this.typeface.AdvanceWidths[0] * this.fontSize;
             this.cellHeight = this.typeface.Height * this.fontSize;
             this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSize);
+            this.underlineY = this.baselineOrigin.Y - this.typeface.UnderlinePosition * this.fontSize;
+            this.underlineHeight = (this.cellHeight * this.typeface.UnderlineThickness);
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
-            this.cellGuidelines = new GuidelineSet(new[] { this.cellRectangle.Left, this.cellRectangle.Right }, new[] { this.cellRectangle.Top, this.cellRectangle.Bottom });
+            this.cellGuidelines = new GuidelineSet(
+                new[] { this.cellRectangle.Left, this.cellRectangle.Right },
+                new[] { this.cellRectangle.Top, this.underlineY, this.underlineY + this.underlineHeight, this.cellRectangle.Bottom });
             this.cellGuidelines.Freeze();
 
             this.Buffer = buffer;
@@ -209,20 +229,89 @@ namespace condo
             return this.cells[x + y * this.horizontalCells] as DrawingVisual;
         }
 
-        public void SetCellCharacter(int x, int y, bool invert = false)
+        private (Character.ColorInfo fg, Character.ColorInfo bg) GetCharacterColors(Character ch)
+        {
+            var cfg = ch.Foreground;
+            if (ch.BasicForegroundColor != ConsoleBuffer.Commands.SetGraphicsRendition.Colors.None)
+            {
+                cfg = this.GetColorInfoFromBasicColor(ch.BasicForegroundColor, ch.ForegroundBright);
+            }
+            else if (ch.ForegroundXterm256)
+            {
+                cfg = this.Palette[ch.ForegroundXterm256Index];
+            }
+
+            var cbg = ch.Background;
+            if (ch.BasicBackgroundColor != ConsoleBuffer.Commands.SetGraphicsRendition.Colors.None)
+            {
+                cbg = this.GetColorInfoFromBasicColor(ch.BasicBackgroundColor, ch.BackgroundBright);
+            }
+            else if (ch.BackgroundXterm256)
+            {
+                cfg = this.Palette[ch.BackgroundXterm256Index];
+            }
+
+            return (cfg, cbg);
+        }
+
+        private Character.ColorInfo GetColorInfoFromBasicColor(ConsoleBuffer.Commands.SetGraphicsRendition.Colors basicColor, bool isBright)
+        {
+            var paletteOffset = isBright ? 8 : 0;
+            switch (basicColor)
+            {
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black:
+                return this.Palette[0 + paletteOffset];
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Red:
+                return this.Palette[1 + paletteOffset];
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Green:
+                return this.Palette[2 + paletteOffset];
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Yellow:
+                return this.Palette[3 + paletteOffset];
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Blue:
+                return this.Palette[4 + paletteOffset];
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Magenta:
+                return this.Palette[5 + paletteOffset];
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Cyan:
+                return this.Palette[6 + paletteOffset];
+            case ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White:
+                return this.Palette[7 + paletteOffset];
+            default:
+                throw new InvalidOperationException("Unexpected color value.");
+            }
+        }
+
+        private void SetCellCharacter(int x, int y, bool invert = false)
         {
             var ch = this.characters[x, y].Character;
+            invert ^= ch.Inverse;
 
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
-                var backgroundRectangle = new Rect(0, 0, this.cellWidth, this.cellHeight);
                 var gs = new GuidelineSet();
                 dc.PushGuidelineSet(this.cellGuidelines);
-                var backgroundBrush = this.brushCache.GetBrush(ch.Background.R, ch.Background.G, ch.Background.B);
-                var foregroundBrush = this.brushCache.GetBrush(ch.Foreground.R, ch.Foreground.G, ch.Foreground.B);
-                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, this.cellRectangle);
+                (var fg, var bg) = this.GetCharacterColors(ch);
+                var backgroundBrush = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
+                var foregroundBrush = this.brushCache.GetBrush(fg.R, fg.G, fg.B);
+                dc.DrawRectangle(!invert || ch.Glyph == 0x0 ? backgroundBrush : foregroundBrush, null, this.cellRectangle);
 
-                if (ch.Foreground == ch.Background) return; // no need to draw same color glyph.
+                if (fg == bg || ch.Glyph == 0x0)
+                {
+                    // if the glyph is unset or we have the same fg/bg we can bail out early (draw a 'blank')
+                    // note we can't treat 0x20 as a blank as this breaks underlining.
+                    return;
+                }
+
+                if (ch.Underline)
+                {
+                    var underlineRectangle = new Rect(0, this.underlineY, this.cellWidth, this.underlineHeight);
+                    dc.DrawRectangle(!invert ? foregroundBrush : backgroundBrush, null, underlineRectangle);
+                }
+
+                if (ch.Glyph == 0x20)
+                {
+                    // okay NOW we can gtfo.
+                    return;
+                }
 
                 GlyphRun gr;
                 if (!this.typeface.CharacterToGlyphMap.TryGetValue((char)ch.Glyph, out var glyphValue))
