@@ -283,7 +283,7 @@ namespace condo
         private void SetCellCharacter(int x, int y, bool invert = false)
         {
             var ch = this.characters[x, y].Character;
-            invert ^= ch.Inverse;
+            invert = invert || (ch.Inverse && ch.Glyph != 0x0);
 
             using (var dc = this.GetCell(x, y).RenderOpen())
             {
@@ -292,7 +292,7 @@ namespace condo
                 (var fg, var bg) = this.GetCharacterColors(ch);
                 var backgroundBrush = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
                 var foregroundBrush = this.brushCache.GetBrush(fg.R, fg.G, fg.B);
-                dc.DrawRectangle(!invert || ch.Glyph == 0x0 ? backgroundBrush : foregroundBrush, null, this.cellRectangle);
+                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, this.cellRectangle);
 
                 if (fg == bg || ch.Glyph == 0x0)
                 {
