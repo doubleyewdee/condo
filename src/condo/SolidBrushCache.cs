@@ -37,6 +37,7 @@ namespace condo
             }
 
             var brush = new SolidColorBrush(new Color { R = R, G = G, B = B, A = A });
+            brush.Freeze();
             if (this.cache.Count == CacheSize)
             {
                 node = this.lruEntries.Last;
