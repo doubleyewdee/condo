@@ -288,6 +288,10 @@ namespace ConsoleBuffer
             {
                 return this.colorPalette[id];
             }
+            set
+            {
+                this.colorPalette[id] = value;
+            }
         }
 
         public Character.ColorInfo this[string name]

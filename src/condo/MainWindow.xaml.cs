@@ -12,6 +12,7 @@ namespace condo
     public partial class MainWindow : Window
     {
         private const int MinimumWindowsVersion = 17763;
+        private readonly XtermPalette mellowPalette;
         private ConsoleWrapper console;
         private KeyHandler keyHandler;
 
@@ -36,6 +37,27 @@ namespace condo
         {
             this.InitializeComponent();
             this.Loaded += this.OnLoaded;
+
+            // XXX: lazy dark but not painfully bright palette
+            this.mellowPalette = new XtermPalette();
+            this.mellowPalette[0] = new Character.ColorInfo { R = 0x1d, G = 0x1f, B = 0x21 };
+            this.mellowPalette[1] = new Character.ColorInfo { R = 0xa5, G = 0x42, B = 0x42 };
+            this.mellowPalette[2] = new Character.ColorInfo { R = 0x8c, G = 0x94, B = 0x40 };
+            this.mellowPalette[3] = new Character.ColorInfo { R = 0xde, G = 0x93, B = 0x5f };
+            this.mellowPalette[4] = new Character.ColorInfo { R = 0x5f, G = 0x81, B = 0x9d };
+            this.mellowPalette[5] = new Character.ColorInfo { R = 0x85, G = 0x67, B = 0x8f };
+            this.mellowPalette[6] = new Character.ColorInfo { R = 0x5e, G = 0x8d, B = 0x87 };
+            this.mellowPalette[7] = new Character.ColorInfo { R = 0x70, G = 0x78, B = 0x80 };
+            this.mellowPalette[8] = new Character.ColorInfo { R = 0x37, G = 0x3b, B = 0x41 };
+            this.mellowPalette[9] = new Character.ColorInfo { R = 0xcc, G = 0x66, B = 0x66 };
+            this.mellowPalette[10] = new Character.ColorInfo { R = 0xb5, G = 0xbd, B = 0x68 };
+            this.mellowPalette[11] = new Character.ColorInfo { R = 0xf0, G = 0xc6, B = 0x74 };
+            this.mellowPalette[12] = new Character.ColorInfo { R = 0x81, G = 0xa2, B = 0xbe };
+            this.mellowPalette[13] = new Character.ColorInfo { R = 0xb2, G = 0x94, B = 0xbb };
+            this.mellowPalette[14] = new Character.ColorInfo { R = 0x8a, G = 0xbe, B = 0xb7 };
+            this.mellowPalette[15] = new Character.ColorInfo { R = 0xc5, G = 0xc8, B = 0xc6 };
+
+            this.screen.Palette = this.mellowPalette;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)

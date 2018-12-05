@@ -495,6 +495,33 @@ namespace ConsoleBuffer
         }
 
         /// <summary>
+        /// Updates the colors of all cells in the buffer from the current palette if they have basic (16 color) values.
+        /// </summary>
+        public void UpdateBasicColorsFromPalette()
+        {
+            lock (this.renderLock)
+            {
+                for (var y = 0; y < this.BufferSize; ++y)
+                {
+                    var line = this.lines[y];
+                    for (var x = 0; x < line.Length; ++x)
+                    {
+                        var ch = line[x];
+                        if (ch.HasBasicBackgroundColor)
+                        {
+                            ch.Background = this.GetColorInfoFromBasicColor(ch.BasicBackgroundColor, ch.BackgroundBright);
+                        }
+                        if (ch.HasBasicForegroundColor)
+                        {
+                            ch.Foreground = this.GetColorInfoFromBasicColor(ch.BasicForegroundColor, ch.ForegroundBright);
+                        }
+                        line[x] = ch;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Render the currently "on-screen" area character-by-character onto the specified target.
         /// </summary>
         /// <param name="target">target to render on to.</param>

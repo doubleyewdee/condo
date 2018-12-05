@@ -10,10 +10,14 @@ namespace ConsoleBuffer
 
         public int Length => this.chars.Count;
 
+        // XXX: should probably remove users of Get/Set and just have them call this for clarity.
+        public Character this[int pos] { get => this.Get(pos); set => this.Set(pos, value); }
+
         public Line()
         {
             var hintSize = 80;
             this.chars = new List<Character>(hintSize);
+            this[0] = new Character { Glyph = 0x20, Options = Character.DefaultOptions };
         }
 
         /// <summary>
@@ -39,7 +43,10 @@ namespace ConsoleBuffer
                 return this.chars[pos];
             }
 
-            return new Character { Glyph = 0x20 };
+            // for short lines we can lazily keep the attributes (specifically background) from whatever our last character was, assuming we had one.
+            var ch = this.chars.Count > 0 ? this.chars[this.chars.Count - 1] : new Character { Options = Character.DefaultOptions };
+            ch.Glyph = 0x20;
+            return ch;
         }
 
         /// <summary>
