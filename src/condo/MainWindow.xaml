@@ -6,8 +6,15 @@
         xmlns:local="clr-namespace:condo"
         mc:Ignorable="d"
         Title="MainWindow" SizeToContent="WidthAndHeight">
-    <Grid>
-        <ScrollViewer Name="scrollViewer" CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False">
+    <Grid Name="grid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ScrollViewer Name="scrollViewer" Grid.Column="0" Grid.Row="0"
+                      CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False">
             <local:Screen x:Name="screen" />
         </ScrollViewer>
     </Grid>

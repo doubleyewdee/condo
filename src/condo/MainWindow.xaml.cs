@@ -1,5 +1,6 @@
 namespace condo
 {
+    using System;
     using System.ComponentModel;
     using System.Security;
     using System.Windows;
@@ -36,7 +37,6 @@ namespace condo
         public MainWindow()
         {
             this.InitializeComponent();
-            this.Loaded += this.OnLoaded;
 
             // XXX: lazy dark but not painfully bright palette
             this.mellowPalette = new XtermPalette();
@@ -56,8 +56,9 @@ namespace condo
             this.mellowPalette[13] = new Character.ColorInfo { R = 0xb2, G = 0x94, B = 0xbb };
             this.mellowPalette[14] = new Character.ColorInfo { R = 0x8a, G = 0xbe, B = 0xb7 };
             this.mellowPalette[15] = new Character.ColorInfo { R = 0xc5, G = 0xc8, B = 0xc6 };
-
             this.screen.Palette = this.mellowPalette;
+
+            this.Loaded += this.OnLoaded;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -74,6 +75,7 @@ namespace condo
                 return;
             }
 
+            this.InitializeWindowSizeHandling();
             this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
 
@@ -120,6 +122,22 @@ namespace condo
             };
 
             this.Closing += this.HandleClosing;
+        }
+
+        private double windowFrameWidth, windowFrameHeight;
+        private void InitializeWindowSizeHandling()
+        {
+            this.windowFrameWidth = this.ActualWidth - this.grid.ActualWidth;
+            this.windowFrameHeight = this.ActualHeight - this.grid.ActualHeight;
+
+            this.MinWidth = this.ActualWidth;
+            this.MinHeight = this.ActualHeight;
+
+            this.scrollViewer.SizeChanged += (_, args) =>
+            {
+                this.MinWidth = this.windowFrameWidth + args.NewSize.Width;
+                this.MinHeight = this.windowFrameHeight + args.NewSize.Height;
+            };
         }
 
         private void HandleClosing(object sender, CancelEventArgs e)

@@ -378,7 +378,7 @@ namespace condo
             this.shouldRedraw = 1;
         }
 
-#region IScrollInfo
+        #region IScrollInfo
         public bool CanVerticallyScroll { get; set; }
         public bool CanHorizontallyScroll { get; set; }
 
@@ -465,6 +465,6 @@ namespace condo
         {
             throw new NotImplementedException();
         }
-#endregion
+        #endregion
     }
 }
