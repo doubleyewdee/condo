@@ -1,6 +1,7 @@
 namespace condo
 {
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Windows;
@@ -12,12 +13,6 @@ namespace condo
 
     public sealed class Screen : FrameworkElement, IRenderTarget, IScrollInfo
     {
-        private struct DrawCharacter
-        {
-            public bool Changed;
-            public Character Character;
-        }
-
         private ConsoleBuffer.Buffer buffer;
         public ConsoleBuffer.Buffer Buffer
         {
@@ -45,13 +40,13 @@ namespace condo
             set
             {
                 this.palette = value;
-                this.ForceFullRedraw();
             }
         }
 
-        private readonly VisualCollection cells;
+        private readonly VisualCollection children;
         private readonly DpiScale dpiInfo;
-        private GlyphTypeface typeface;
+        private Typeface typeface;
+        private GlyphTypeface glyphTypeface;
         private int fontSizeEm = 16;
         private double cellWidth, cellHeight;
         private Point baselineOrigin;
@@ -60,7 +55,7 @@ namespace condo
         private double underlineHeight;
         private GuidelineSet cellGuidelines;
         private int horizontalCells, verticalCells;
-        private DrawCharacter[,] characters;
+        private Character[,] characters;
         bool cursorInverted;
         private volatile int shouldRedraw;
         private int consoleBufferSize;
@@ -97,7 +92,7 @@ namespace condo
         public Screen(ConsoleBuffer.Buffer buffer)
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
-            this.cells = new VisualCollection(this);
+            this.children = new VisualCollection(this);
             this.Buffer = buffer;
 
             this.cursorBlinkWatch.Start();
@@ -161,6 +156,7 @@ namespace condo
                 this.ScrollOwner?.ScrollToVerticalOffset(this.VerticalOffset);
             }
 
+            /*
             if (this.Buffer.CursorVisible && this.VerticalOffset == this.ExtentHeight - this.ViewportHeight)
             {
                 if (this.cursorBlinkWatch.Elapsed >= BlinkFrequency)
@@ -172,6 +168,7 @@ namespace condo
                     this.SetCellCharacter(x, y, this.cursorInverted);
                 }
             }
+            */
         }
 
         public void Close()
@@ -179,11 +176,11 @@ namespace condo
             this.Buffer.PropertyChanged -= this.OnBufferPropertyChanged;
         }
 
-        protected override int VisualChildrenCount => this.cells.Count;
+        protected override int VisualChildrenCount => this.children.Count;
 
         protected override Visual GetVisualChild(int index)
         {
-            return this.cells[index];
+            return this.children[index];
         }
 
         protected override Size MeasureOverride(Size availableSize)
@@ -193,25 +190,31 @@ namespace condo
 
         private void Resize()
         {
-            this.cells.Clear();
-
             this.horizontalCells = this.Buffer.Width;
             this.verticalCells = this.Buffer.Height;
-            this.characters = new DrawCharacter[this.Buffer.Width, this.Buffer.Height];
+            this.characters = new Character[this.Buffer.Width, this.Buffer.Height];
 
+            this.children.Clear();
+            this.children.Add(new DrawingVisual { Offset = new Vector(0, 0) });
+
+            this.cellGuidelines = new GuidelineSet();
+            this.cellGuidelines.GuidelinesX.Add(0);
+            this.cellGuidelines.GuidelinesY.Add(0);
+            for (var x = 0; x < this.horizontalCells; ++x)
+            {
+                this.cellGuidelines.GuidelinesX.Add(this.cellWidth * (x + 1));
+            }
             for (var y = 0; y < this.verticalCells; ++y)
             {
-                for (var x = 0; x < this.horizontalCells; ++x)
-                {
-                    var dv = new DrawingVisual();
-                    dv.Offset = new Vector(x * this.cellWidth, y * this.cellHeight);
-                    this.cells.Add(dv);
-                }
+                this.cellGuidelines.GuidelinesY.Add(this.cellHeight * (y + 1));
             }
 
             this.Width = this.horizontalCells * this.cellWidth;
             this.Height = this.verticalCells * this.cellHeight;
             this.consoleBufferSize = this.Buffer.BufferSize;
+            this.cellGuidelines.Freeze();
+
+            this.shouldRedraw = 1;
         }
 
         private void SetFontSize(int newFontSizeEm)
@@ -225,28 +228,24 @@ namespace condo
 
             this.fontSizeEm = newFontSizeEm;
 
-            if (!new Typeface("Consolas").TryGetGlyphTypeface(out this.typeface))
+            this.typeface = new Typeface("Consolas"); // TODO: do something if we can't find this.
+            if (!this.typeface.TryGetGlyphTypeface(out this.glyphTypeface))
             {
                 throw new InvalidOperationException("Could not get desired font.");
             }
-            this.cellWidth = this.typeface.AdvanceWidths[0] * this.fontSizeEm;
-            this.cellHeight = this.typeface.Height * this.fontSizeEm;
-            this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSizeEm);
-            this.underlineY = this.baselineOrigin.Y - this.typeface.UnderlinePosition * this.fontSizeEm;
-            this.underlineHeight = (this.cellHeight * this.typeface.UnderlineThickness);
+            this.cellWidth = this.glyphTypeface.AdvanceWidths[0] * this.fontSizeEm;
+            this.cellHeight = this.glyphTypeface.Height * this.fontSizeEm;
+            this.baselineOrigin = new Point(0, this.glyphTypeface.Baseline * this.fontSizeEm);
+            this.underlineY = this.baselineOrigin.Y - this.glyphTypeface.UnderlinePosition * this.fontSizeEm;
+            this.underlineHeight = (this.cellHeight * this.glyphTypeface.UnderlineThickness);
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
-            this.cellGuidelines = new GuidelineSet(
-                new[] { this.cellRectangle.Left, this.cellRectangle.Right },
-                new[] { this.cellRectangle.Top, this.underlineY, this.underlineY + this.underlineHeight, this.cellRectangle.Bottom });
-            this.cellGuidelines.Freeze();
 
-            this.ForceFullRedraw();
             this.Resize();
         }
 
         private DrawingVisual GetCell(int x, int y)
         {
-            return this.cells[x + y * this.horizontalCells] as DrawingVisual;
+            return this.children[x + y * this.horizontalCells] as DrawingVisual;
         }
 
         private (Character.ColorInfo fg, Character.ColorInfo bg) GetCharacterColors(Character ch)
@@ -300,82 +299,96 @@ namespace condo
             }
         }
 
-        private void SetCellCharacter(int x, int y, bool invert = false)
+        private void Redraw()
         {
-            var ch = this.characters[x, y].Character;
-            invert = invert || (ch.Inverse && ch.Glyph != 0x0);
+            var dv = this.children[0] as DrawingVisual;
+            var glyphChars = new List<ushort>(this.horizontalCells);
+            var advanceWidths = new List<double>(this.horizontalCells);
 
-            using (var dc = this.GetCell(x, y).RenderOpen())
+            using (var dc = dv.RenderOpen())
             {
-                var gs = new GuidelineSet();
                 dc.PushGuidelineSet(this.cellGuidelines);
-                (var fg, var bg) = this.GetCharacterColors(ch);
-                var backgroundBrush = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
-                var foregroundBrush = this.brushCache.GetBrush(fg.R, fg.G, fg.B);
-                dc.DrawRectangle(!invert ? backgroundBrush : foregroundBrush, null, this.cellRectangle);
 
-                if (fg == bg || ch.Glyph == 0x0)
+                // Render line by line, attempting to render as long as properties remain the same or we reach the end of the line.
+                // Properties that can change and cause a render stop:
+                // - Any of the basic character properties (bright/inverse/colors/etc)
+                // - Hitting a "null" character (this is a terminator for certain properties such as underlining/inverse/etc)
+                // - Hitting a visible cursor (as we may need to invert it explicitly)
+                for (var y = 0; y < this.verticalCells; ++y)
                 {
-                    // if the glyph is unset or we have the same fg/bg we can bail out early (draw a 'blank')
-                    // note we can't treat 0x20 as a blank as this breaks underlining.
-                    return;
+                    var runStart = 0;
+                    var x = 0;
+                    
+                    while (x < this.horizontalCells)
+                    {
+                        ++x;
+
+                        if (   x == this.horizontalCells
+                            || !this.characters[runStart, y].PropertiesEqual(this.characters[x, y])
+                            || (this.characters[x, y].Glyph == 0x0 && this.characters[runStart, y].Glyph != 0x0)
+                            || (this.Buffer.CursorVisible && (x, y) == this.Buffer.CursorPosition))
+                        {
+                            var startX = runStart;
+                            var charCount = x - startX;
+                            runStart = x;
+                            var startChar = this.characters[startX, y];
+                            var invert = startChar.Inverse && startChar.Glyph != 0x0;
+
+                            Character.ColorInfo fg, bg;
+                            if (!invert) (fg, bg) = this.GetCharacterColors(startChar);
+                            else (bg, fg) = this.GetCharacterColors(startChar);
+
+                            var backgroundBrush = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
+                            var foregroundBrush = this.brushCache.GetBrush(fg.R, fg.G, fg.B);
+
+                            dc.DrawRectangle(backgroundBrush, null, new Rect(startX * this.cellWidth, y * this.cellHeight, charCount * this.cellWidth, this.cellHeight));
+
+                            // If we began with a null character it should be safe to stop with rendering the background.
+                            if (fg == bg || startChar.Glyph == 0x0)
+                            {
+                                continue;
+                            }
+
+                            var glyphOrigin = new Point((startX * this.cellWidth) + this.baselineOrigin.X, (y * this.cellHeight) + this.baselineOrigin.Y);
+                            if (startChar.Underline)
+                            {
+                                var underlineRectangle = new Rect(glyphOrigin.X, y * this.cellHeight + this.underlineY, charCount * this.cellWidth, this.underlineHeight);
+                                dc.DrawRectangle(foregroundBrush, null, underlineRectangle);
+                            }
+
+                            var content = false;
+                            glyphChars.Clear();
+                            advanceWidths.Clear();
+                            for (var c = startX; c < x; ++c)
+                            {
+                                content |= this.characters[c, y].Glyph != 0x20;
+
+                                if (!this.glyphTypeface.CharacterToGlyphMap.TryGetValue((char)this.characters[c, y].Glyph, out var glyphIndex))
+                                {
+                                    glyphIndex = 0;
+                                }
+                                glyphChars.Add(glyphIndex);
+                                advanceWidths.Add(this.glyphTypeface.AdvanceWidths[glyphIndex] * this.fontSizeEm);
+                            }
+
+                            if (content)
+                            {
+                                var gr = new GlyphRun(this.glyphTypeface, 0, false, this.fontSizeEm, (float)this.dpiInfo.PixelsPerDip, new List<ushort>(glyphChars),
+                                    glyphOrigin, new List<double>(advanceWidths), null, null, null, null, null, null);
+
+                                dc.DrawGlyphRun(foregroundBrush, gr);
+                            }
+                        }
+                    }
                 }
 
-                if (ch.Underline)
-                {
-                    var underlineRectangle = new Rect(0, this.underlineY, this.cellWidth, this.underlineHeight);
-                    dc.DrawRectangle(!invert ? foregroundBrush : backgroundBrush, null, underlineRectangle);
-                }
-
-                if (ch.Glyph == 0x20)
-                {
-                    // okay NOW we can gtfo.
-                    return;
-                }
-
-                GlyphRun gr;
-                if (!this.typeface.CharacterToGlyphMap.TryGetValue((char)ch.Glyph, out var glyphValue))
-                {
-                    glyphValue = 0;
-                }
-                gr = new GlyphRun(this.typeface, 0, false, this.fontSizeEm, (float)this.dpiInfo.PixelsPerDip, new[] { glyphValue },
-                    this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
-
-                dc.DrawGlyphRun(!invert ? foregroundBrush : backgroundBrush, gr);
+                dc.Pop();
             }
         }
 
         public void RenderCharacter(Character c, int x, int y)
         {
-            if (c != this.characters[x, y].Character)
-            {
-                this.characters[x, y].Changed = true;
-                this.characters[x, y].Character = c;
-            }
-        }
-
-        private void Redraw()
-        {
-            for (var x = 0; x < this.Buffer.Width; ++x)
-            {
-                for (var y = 0; y < this.Buffer.Height; ++y)
-                {
-                    this.SetCellCharacter(x, y);
-                    this.characters[x, y].Changed = false;
-                }
-            }
-        }
-
-        private void ForceFullRedraw()
-        {
-            for (var x = 0; x < this.buffer.Width; ++x)
-            {
-                for (var y = 0; y < this.buffer.Height; ++y)
-                {
-                    this.characters[x, y].Changed = true;
-                }
-            }
-            this.shouldRedraw = 1;
+            this.characters[x, y] = c;
         }
 
         #region IScrollInfo

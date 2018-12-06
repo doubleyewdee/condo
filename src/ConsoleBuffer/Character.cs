@@ -142,9 +142,17 @@ namespace ConsoleBuffer
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Returns true if the characters have identical properties, even if the glyphs differ.
+        /// </summary>
+        public bool PropertiesEqual(Character other)
+        {
+            return this.Options == other.Options && this.Foreground == other.Foreground && this.Background == other.Background;
+        }
+
         public bool Equals(Character other)
         {
-            return this.Options == other.Options && this.Foreground == other.Foreground && this.Background == other.Background && this.Glyph == other.Glyph;
+            return this.PropertiesEqual(other) && this.Glyph == other.Glyph;
         }
 
         public static bool operator ==(Character c1, Character c2)
