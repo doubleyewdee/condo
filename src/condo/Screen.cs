@@ -45,32 +45,26 @@ namespace condo
             set
             {
                 this.palette = value;
-                for (var x = 0; x < this.buffer.Width; ++x)
-                {
-                    for (var y = 0; y < this.buffer.Height; ++y)
-                    {
-                        this.characters[x, y].Changed = true;
-                    }
-                }
+                this.ForceFullRedraw();
             }
         }
 
-        private VisualCollection cells;
-        private DpiScale dpiInfo;
-        private readonly GlyphTypeface typeface;
-        private readonly int fontSize = 16;
-        private readonly double cellWidth, cellHeight;
-        private readonly Point baselineOrigin;
-        private readonly Rect cellRectangle;
-        private readonly double underlineY;
-        private readonly double underlineHeight;
-        private readonly GuidelineSet cellGuidelines;
+        private readonly VisualCollection cells;
+        private readonly DpiScale dpiInfo;
+        private GlyphTypeface typeface;
+        private int fontSizeEm = 16;
+        private double cellWidth, cellHeight;
+        private Point baselineOrigin;
+        private Rect cellRectangle;
+        private double underlineY;
+        private double underlineHeight;
+        private GuidelineSet cellGuidelines;
         private int horizontalCells, verticalCells;
         private DrawCharacter[,] characters;
         bool cursorInverted;
         private volatile int shouldRedraw;
         private int consoleBufferSize;
-        private SolidBrushCache brushCache = new SolidBrushCache();
+        private readonly SolidBrushCache brushCache = new SolidBrushCache();
 
         private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(250);
         private readonly Stopwatch cursorBlinkWatch = new Stopwatch();
@@ -104,22 +98,8 @@ namespace condo
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
             this.cells = new VisualCollection(this);
-            if (!new Typeface("Consolas").TryGetGlyphTypeface(out this.typeface))
-            {
-                throw new InvalidOperationException("Could not get desired font.");
-            }
-            this.cellWidth = this.typeface.AdvanceWidths[0] * this.fontSize;
-            this.cellHeight = this.typeface.Height * this.fontSize;
-            this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSize);
-            this.underlineY = this.baselineOrigin.Y - this.typeface.UnderlinePosition * this.fontSize;
-            this.underlineHeight = (this.cellHeight * this.typeface.UnderlineThickness);
-            this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
-            this.cellGuidelines = new GuidelineSet(
-                new[] { this.cellRectangle.Left, this.cellRectangle.Right },
-                new[] { this.cellRectangle.Top, this.underlineY, this.underlineY + this.underlineHeight, this.cellRectangle.Bottom });
-            this.cellGuidelines.Freeze();
-
             this.Buffer = buffer;
+
             this.cursorBlinkWatch.Start();
 
             CompositionTarget.Rendering += this.RenderFrame;
@@ -131,7 +111,17 @@ namespace condo
             {
                 args.MouseDevice.OverrideCursor = Cursors.Arrow;
             };
+            this.MouseWheel += (sender, args) =>
+            {
+                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                {
+                    var factor = args.Delta > 0 ? 2 : -2;
+                    this.SetFontSize(this.fontSizeEm + factor);
+                    args.Handled = true;
+                }
+            };
 
+            this.SetFontSize(14);
             this.Resize();
         }
 
@@ -222,6 +212,36 @@ namespace condo
             this.Width = this.horizontalCells * this.cellWidth;
             this.Height = this.verticalCells * this.cellHeight;
             this.consoleBufferSize = this.Buffer.BufferSize;
+        }
+
+        private void SetFontSize(int newFontSizeEm)
+        {
+            newFontSizeEm = Math.Max(8, Math.Min(72, newFontSizeEm));
+
+            if (this.fontSizeEm == newFontSizeEm)
+            {
+                return;
+            }
+
+            this.fontSizeEm = newFontSizeEm;
+
+            if (!new Typeface("Consolas").TryGetGlyphTypeface(out this.typeface))
+            {
+                throw new InvalidOperationException("Could not get desired font.");
+            }
+            this.cellWidth = this.typeface.AdvanceWidths[0] * this.fontSizeEm;
+            this.cellHeight = this.typeface.Height * this.fontSizeEm;
+            this.baselineOrigin = new Point(0, this.typeface.Baseline * this.fontSizeEm);
+            this.underlineY = this.baselineOrigin.Y - this.typeface.UnderlinePosition * this.fontSizeEm;
+            this.underlineHeight = (this.cellHeight * this.typeface.UnderlineThickness);
+            this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
+            this.cellGuidelines = new GuidelineSet(
+                new[] { this.cellRectangle.Left, this.cellRectangle.Right },
+                new[] { this.cellRectangle.Top, this.underlineY, this.underlineY + this.underlineHeight, this.cellRectangle.Bottom });
+            this.cellGuidelines.Freeze();
+
+            this.ForceFullRedraw();
+            this.Resize();
         }
 
         private DrawingVisual GetCell(int x, int y)
@@ -318,7 +338,7 @@ namespace condo
                 {
                     glyphValue = 0;
                 }
-                gr = new GlyphRun(this.typeface, 0, false, this.fontSize, (float)this.dpiInfo.PixelsPerDip, new[] { glyphValue },
+                gr = new GlyphRun(this.typeface, 0, false, this.fontSizeEm, (float)this.dpiInfo.PixelsPerDip, new[] { glyphValue },
                     this.baselineOrigin, new[] { 0.0 }, new[] { new Point(0, 0) }, null, null, null, null, null);
 
                 dc.DrawGlyphRun(!invert ? foregroundBrush : backgroundBrush, gr);
@@ -344,6 +364,18 @@ namespace condo
                     this.characters[x, y].Changed = false;
                 }
             }
+        }
+
+        private void ForceFullRedraw()
+        {
+            for (var x = 0; x < this.buffer.Width; ++x)
+            {
+                for (var y = 0; y < this.buffer.Height; ++y)
+                {
+                    this.characters[x, y].Changed = true;
+                }
+            }
+            this.shouldRedraw = 1;
         }
 
 #region IScrollInfo
