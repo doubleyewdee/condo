@@ -89,10 +89,10 @@ namespace condo
                     this.Buffer.AppendString("\x1b[1m");
                     break;
                 case 2:
-                    this.Buffer.AppendString("\x1b[4m");
+                    this.Buffer.AppendString("\x1b[7m");
                     break;
                 case 3:
-                    this.Buffer.AppendString("\x1b[7m");
+                    this.Buffer.AppendString("\x1b[4m");
                     break;
                 }
                 this.Buffer.AppendString($"line {i}\x1b[m\r\n");
