@@ -34,9 +34,10 @@ namespace ConsoleBuffer.Commands
             {
                 this.Direction = Parameter.Before;
             }
-            if (this.Parameters.Count == 1 && uint.TryParse(this.Parameters[0], out var param))
-            {
-                param = Math.Min((uint)Parameter.Unknown, param);
+
+            if (this.Parameters.Count == 1)
+            {   
+                var param = Math.Min((uint)Parameter.Unknown, (uint)this.Parameters.GetValue(0));
                 this.Direction = (Parameter)param;
             }
         }

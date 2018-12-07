@@ -17,15 +17,15 @@ namespace ConsoleBuffer.Commands
             switch (cmd)
             {
             case 'G':
-                this.PosX = this.ParameterToNumber(0, defaultValue: 1) - 1;
+                this.PosX = this.Parameters.GetValue(0, 1) - 1; 
                 break;
             case 'd':
-                this.PosY = this.ParameterToNumber(0, defaultValue: 1) - 1;
+                this.PosY = this.Parameters.GetValue(0, 1) - 1;
                 break;
             case 'H':
             case 'f':
-                this.PosY = this.ParameterToNumber(0, defaultValue: 1) - 1;
-                this.PosX = this.ParameterToNumber(1, defaultValue: 1) - 1;
+                this.PosY = this.Parameters.GetValue(0, 1) - 1; 
+                this.PosX = this.Parameters.GetValue(1, 1) - 1;
                 break;
             }
         }

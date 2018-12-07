@@ -2,9 +2,26 @@ namespace ConsoleBuffer.Commands
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     public abstract class ControlSequence : Base
     {
+        public class ParsedParameters
+        {
+            public int GetValue(int offset, int defaultValue = 0, int maxValue = int.MaxValue)
+            {
+                if(offset < this.Count)
+                {
+                    return Math.Max(defaultValue, Math.Min(this.Parameters[offset], maxValue));
+                }
+
+                return defaultValue;
+            }
+
+            public int Count { get; set; }
+            public int[] Parameters { get; set; } = new int[16];
+        }
+
         public static Base Create(char command, string bufferData)
         {
             //Trace.WriteLine($"Parsing sequence ^[[{bufferData}{command}");
@@ -36,14 +53,16 @@ namespace ConsoleBuffer.Commands
         }
 
         public bool IsExtended { get; private set; }
-        protected IList<string> Parameters { get; private set; }
+        protected ParsedParameters Parameters { get; private set; } = new ParsedParameters();
         protected ControlSequence(string bufferData) : base(bufferData) { }
 
         protected override void Parse(string bufferData)
         {
+            this.Parameters.Count = 0;
+
             if (bufferData.Length == 0)
             {
-                this.Parameters = Array.Empty<string>();
+                this.Parameters.Parameters[0] = 0;
                 return;
             }
 
@@ -54,17 +73,22 @@ namespace ConsoleBuffer.Commands
                 startIndex = 1;
             }
 
-            this.Parameters = bufferData.Substring(startIndex).Split(new[] { ';' });
-        }
+            var idx = startIndex;
+            var len = bufferData.Length;
 
-        protected int ParameterToNumber(int offset, int defaultValue = 0, int maxValue = short.MaxValue)
-        {
-            if (this.Parameters.Count > offset && ushort.TryParse(this.Parameters[offset], out var paramValue))
+            // Parses the string in bufferData to extract the int's represented by text,
+            // it will do it without an allocations.  bufferData takes the form of
+            // NUM;NUM;NUM... for an unknown number of of NUM's
+            while (idx < len)
             {
-                return Math.Max(defaultValue, Math.Min(paramValue, maxValue));
+                var val = 0;
+                while (idx < len && bufferData[idx] != ';')
+                {
+                    val = val * 10 + (bufferData[idx++] - '0');
+                }
+                idx++;
+                this.Parameters.Parameters[this.Parameters.Count++] = (ushort)val;
             }
-
-            return defaultValue;
         }
     }
 }
