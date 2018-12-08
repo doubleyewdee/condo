@@ -6,20 +6,43 @@ namespace ConsoleBuffer.Commands
 
     public abstract class ControlSequence : Base
     {
-        public class ParsedParameters
+        public sealed class ParsedParameters
         {
-            public int GetValue(int offset, int defaultValue = 0, int maxValue = int.MaxValue)
+            // This 'should' be more than enough slots for parameters,
+            // if we get more than this, it will be considered bad data
+            // and throw an exception.
+            private static readonly int maxParameters = 32;
+            public static readonly int errorValue = -1; // eventually gets converted to unsigned, so this can be an error
+
+            public int GetValue(int offset, int defaultValue = -1, int maxValue = int.MaxValue)
             {
                 if(offset < this.Count)
                 {
-                    return Math.Max(defaultValue, Math.Min(this.Parameters[offset], maxValue));
+                    var num = this.Parameters[offset];
+
+                    // If we had a parse error, then return the default
+                    if (num == errorValue)
+                    {
+                        return defaultValue;
+                    }
+
+                    return Math.Max(defaultValue, Math.Min(num, maxValue));
                 }
 
                 return defaultValue;
             }
 
+            public void Clear()
+            {
+                this.Count = 0;
+                for (int idx = 0; idx < maxParameters; idx++)
+                {
+                    this.Parameters[idx] = 0;
+                }
+            }
+
             public int Count { get; set; }
-            public int[] Parameters { get; set; } = new int[16];
+            public int[] Parameters { get; set; } = new int[maxParameters];
         }
 
         public static Base Create(char command, string bufferData)
@@ -58,14 +81,16 @@ namespace ConsoleBuffer.Commands
 
         protected override void Parse(string bufferData)
         {
-            this.Parameters.Count = 0;
+            // Get our parameter list to known state
+            this.Parameters.Clear();
 
+            // If the buffer is empty, nothing to do here
             if (bufferData.Length == 0)
             {
-                this.Parameters.Parameters[0] = 0;
                 return;
             }
 
+            // Is this an extened command, if so, flag and move past it
             var startIndex = 0;
             if (bufferData[0] == '?')
             {
@@ -73,6 +98,7 @@ namespace ConsoleBuffer.Commands
                 startIndex = 1;
             }
 
+            // Down to business
             var idx = startIndex;
             var len = bufferData.Length;
 
@@ -81,13 +107,41 @@ namespace ConsoleBuffer.Commands
             // NUM;NUM;NUM... for an unknown number of of NUM's
             while (idx < len)
             {
+                // Parse the number
                 var val = 0;
+                bool neg = false;
                 while (idx < len && bufferData[idx] != ';')
                 {
-                    val = val * 10 + (bufferData[idx++] - '0');
+                    if (bufferData[idx] == '-')
+                    {
+                        neg = true;
+                        idx++;
+                    }
+
+                    char c = bufferData[idx];
+
+                    // Check for bogus characters
+                    if ((c < '0' || c > '9') && c != ';')
+                    {
+                        throw new ArgumentException($"Bad control sequence: {bufferData}");
+                    }
+
+                    // Take the previous character value (or accumulated value), multiply by 10
+                    // add in the current characteres numerical value.
+                    val = val * 10 + (c - '0');
+                    idx++;  // next char
+
                 }
-                idx++;
-                this.Parameters.Parameters[this.Parameters.Count++] = (ushort)val;
+
+                idx++; // get past the ';'
+
+                // Check for ushort overflow
+                if (val > ushort.MaxValue || neg == true)
+                {
+                    val = ParsedParameters.errorValue;
+                }
+
+                this.Parameters.Parameters[this.Parameters.Count++] = val;
             }
         }
     }
