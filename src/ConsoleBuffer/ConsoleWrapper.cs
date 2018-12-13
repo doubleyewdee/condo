@@ -183,7 +183,7 @@ namespace ConsoleBuffer
         {
             using (var ptyOutput = new FileStream(this.readHandle, FileAccess.Read))
             {
-                var input = new byte[2048];
+                var input = new byte[4096];
 
                 while (!this.disposed)
                 {
