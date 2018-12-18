@@ -4,8 +4,6 @@ namespace ConsoleBuffer
     using System.ComponentModel;
     using System.IO;
     using System.Runtime.InteropServices;
-    using System.Text;
-    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Win32.SafeHandles;
 
@@ -65,6 +63,18 @@ namespace ConsoleBuffer
             this.Height = 25;
             this.Width = 80;
             this.Buffer = new Buffer(this.Width, this.Height);
+            this.Buffer.PropertyChanged += (sender, args) =>
+            {
+                if (args.PropertyName == nameof(this.Buffer.ViewDimensions))
+                {
+                    if ((this.Width, this.Height) != this.Buffer.ViewDimensions)
+                    {
+                        this.Width = this.Buffer.Width;
+                        this.Height = this.Buffer.Height;
+                        NativeMethods.ResizePseudoConsole(this.consoleHandle, new NativeMethods.COORD { X = this.Width, Y = this.Height });
+                    }
+                }
+            };
 
             this.CreatePTY();
             this.InitializeStartupInfo();

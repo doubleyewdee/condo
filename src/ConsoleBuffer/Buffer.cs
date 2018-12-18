@@ -6,6 +6,9 @@ namespace ConsoleBuffer
 
     public sealed class Buffer : INotifyPropertyChanged
     {
+        public const int MinimumWidth = 80;
+        public const int MinimumHeight = 25;
+
         private readonly SequenceParser parser = new SequenceParser();
         private readonly CircularBuffer<Line> lines = new CircularBuffer<Line>(short.MaxValue);
         private readonly object renderLock = new object();
@@ -19,6 +22,11 @@ namespace ConsoleBuffer
         private long wrapCharacter;
         private int currentChar;
         private Character characterTemplate = new Character { Glyph = 0x0 };
+
+        /// <summary>
+        /// The viewable dimensions of the buffer.
+        /// </summary>
+        public (int X, int Y) ViewDimensions => (this.Width, this.Height);
 
         /// <summary>
         /// we store X/Y as 0-offset indexes for convenience. escape codes will pass these around as 1-offset (top left is 1,1)
@@ -48,11 +56,11 @@ namespace ConsoleBuffer
         /// <summary>
         /// Width of the console in characters.
         /// </summary>
-        public short Width { get; set; }
+        public short Width { get; private set; }
         /// <summary>
         /// Height of the console in characters.
         /// </summary>
-        public short Height { get; set; }
+        public short Height { get; private set; }
 
         /// <summary>
         /// Returns the total number of lines in the buffer.
@@ -76,6 +84,30 @@ namespace ConsoleBuffer
             }
             this.topVisibleLine = 0;
             this.bottomVisibleLine = this.MaxCursorY;
+        }
+
+        public void SetDimensions(int width, int height)
+        {
+            if (width < MinimumWidth || width > short.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(width));
+            }
+            if (height < MinimumHeight || height > short.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(height));
+            }
+
+            lock (this.renderLock)
+            {
+                if (height != this.Height || width != this.Width)
+                {
+                    var heightDiff = height - this.Height;
+                    this.Width = (short)width;
+                    this.Height = (short)height;
+                    this.topVisibleLine -= heightDiff;
+                    this.OnPropertyChanged(nameof(this.ViewDimensions));
+                }
+            }
         }
 
         /// <summary>
