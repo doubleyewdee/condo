@@ -133,10 +133,17 @@ namespace condo
             this.MinWidth = this.ActualWidth;
             this.MinHeight = this.ActualHeight;
 
-            this.scrollViewer.SizeChanged += (_, args) =>
+            this.scrollViewer.SizeChanged += (sender, args) =>
             {
-                this.MinWidth = this.windowFrameWidth + args.NewSize.Width;
-                this.MinHeight = this.windowFrameHeight + args.NewSize.Height;
+                Logger.Verbose($"sv resize n:{args.NewSize} p:{args.PreviousSize}");
+                //this.MinWidth = this.windowFrameWidth + args.NewSize.Width;
+                //this.MinHeight = this.windowFrameHeight + args.NewSize.Height;
+
+                args.Handled = true;
+            };
+            this.SizeChanged += (sender, args) =>
+            {
+                Logger.Verbose($"win resize n:{args.NewSize} p:{args.PreviousSize}");
             };
         }
 

@@ -83,7 +83,7 @@ namespace condo
         public Screen(ConsoleBuffer.Buffer buffer)
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
-            this.children = new VisualCollection(this);
+            this.children = new VisualCollection(this) { new DrawingVisual { Offset = new Vector(0, 0) } };
             this.Buffer = buffer;
 
             this.cursorBlinkWatch.Start();
@@ -109,6 +109,10 @@ namespace condo
 
             this.SetFontSize(14);
             this.Resize();
+            this.SizeChanged += (sender, args) =>
+            {
+                Logger.Verbose($"screen size changed: n:{args.NewSize}; p:{args.PreviousSize}");
+            };
         }
 
         private void OnBufferPropertyChanged(object sender, PropertyChangedEventArgs args)
@@ -122,6 +126,10 @@ namespace condo
                 {
                     this.shouldRedraw = 1;
                 }
+            }
+            else if (args.PropertyName == nameof(this.Buffer.ViewDimensions))
+            {
+                this.Resize();
             }
         }
 
@@ -173,14 +181,19 @@ namespace condo
             return new Size(this.cellWidth * this.horizontalCells, this.cellHeight * this.verticalCells);
         }
 
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            var x = (int)Math.Floor(finalSize.Width / this.cellWidth);
+            var y = (int)Math.Floor(finalSize.Height / this.cellHeight);
+            this.Buffer.SetDimensions(x, y);
+            return new Size(this.cellWidth * x, this.cellHeight * y);
+        }
+
         private void Resize()
         {
             this.horizontalCells = this.Buffer.Width;
             this.verticalCells = this.Buffer.Height;
             this.characters = new Character[this.Buffer.Width, this.Buffer.Height];
-
-            this.children.Clear();
-            this.children.Add(new DrawingVisual { Offset = new Vector(0, 0) });
 
             this.cellGuidelines = new GuidelineSet();
             this.cellGuidelines.GuidelinesX.Add(0);
@@ -194,8 +207,6 @@ namespace condo
                 this.cellGuidelines.GuidelinesY.Add(this.cellHeight * (y + 1));
             }
 
-            this.Width = this.horizontalCells * this.cellWidth;
-            this.Height = this.verticalCells * this.cellHeight;
             this.consoleBufferSize = this.Buffer.BufferSize;
             this.cellGuidelines.Freeze();
 
@@ -226,11 +237,6 @@ namespace condo
             this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
 
             this.Resize();
-        }
-
-        private DrawingVisual GetCell(int x, int y)
-        {
-            return this.children[x + y * this.horizontalCells] as DrawingVisual;
         }
 
         private (Character.ColorInfo fg, Character.ColorInfo bg) GetCharacterColors(Character ch)
