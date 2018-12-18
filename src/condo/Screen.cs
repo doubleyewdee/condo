@@ -31,6 +31,8 @@ namespace condo
         }
 
         public XtermPalette Palette { get; set; } = XtermPalette.Default;
+        public double CellWidth { get; private set; }
+        public double CellHeight { get; private set; }
 
         private bool RenderCursor => this.Buffer.CursorVisible && this.VerticalOffset == this.ExtentHeight - this.ViewportHeight;
 
@@ -39,7 +41,6 @@ namespace condo
         private Typeface typeface;
         private GlyphTypeface glyphTypeface;
         private int fontSizeEm = 16;
-        private double cellWidth, cellHeight;
         private Point baselineOrigin;
         private Rect cellRectangle;
         private double underlineY;
@@ -176,20 +177,20 @@ namespace condo
         {
             if (this.ActualHeight > availableSize.Height || this.ActualWidth > availableSize.Width)
             {
-                var x = Math.Max(ConsoleBuffer.Buffer.MinimumWidth, (int)Math.Floor(availableSize.Width / this.cellWidth));
-                var y = Math.Max(ConsoleBuffer.Buffer.MinimumHeight, (int)Math.Floor(availableSize.Height / this.cellHeight));
-                return new Size(this.cellWidth * x, this.cellHeight * y);
+                var x = Math.Max(ConsoleBuffer.Buffer.MinimumWidth, (int)Math.Floor(availableSize.Width / this.CellWidth));
+                var y = Math.Max(ConsoleBuffer.Buffer.MinimumHeight, (int)Math.Floor(availableSize.Height / this.CellHeight));
+                return new Size(this.CellWidth * x, this.CellHeight * y);
             }
 
-            return new Size(this.horizontalCells * this.cellWidth, this.verticalCells * this.cellHeight);
+            return new Size(this.horizontalCells * this.CellWidth, this.verticalCells * this.CellHeight);
         }
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            var x = (int)Math.Floor(finalSize.Width / this.cellWidth);
-            var y = (int)Math.Floor(finalSize.Height / this.cellHeight);
+            var x = (int)Math.Floor(finalSize.Width / this.CellWidth);
+            var y = (int)Math.Floor(finalSize.Height / this.CellHeight);
             this.Buffer.SetDimensions(x, y);
-            return new Size(this.cellWidth * x, this.cellHeight * y);
+            return new Size(this.CellWidth * x, this.CellHeight * y);
         }
 
         private void Resize()
@@ -203,11 +204,11 @@ namespace condo
             this.cellGuidelines.GuidelinesY.Add(0);
             for (var x = 0; x < this.horizontalCells; ++x)
             {
-                this.cellGuidelines.GuidelinesX.Add(this.cellWidth * (x + 1));
+                this.cellGuidelines.GuidelinesX.Add(this.CellWidth * (x + 1));
             }
             for (var y = 0; y < this.verticalCells; ++y)
             {
-                this.cellGuidelines.GuidelinesY.Add(this.cellHeight * (y + 1));
+                this.cellGuidelines.GuidelinesY.Add(this.CellHeight * (y + 1));
             }
 
             this.consoleBufferSize = this.Buffer.BufferSize;
@@ -232,12 +233,12 @@ namespace condo
             {
                 throw new InvalidOperationException("Could not get desired font.");
             }
-            this.cellWidth = this.glyphTypeface.AdvanceWidths[0] * this.fontSizeEm;
-            this.cellHeight = this.glyphTypeface.Height * this.fontSizeEm;
+            this.CellWidth = this.glyphTypeface.AdvanceWidths[0] * this.fontSizeEm;
+            this.CellHeight = this.glyphTypeface.Height * this.fontSizeEm;
             this.baselineOrigin = new Point(0, this.glyphTypeface.Baseline * this.fontSizeEm);
             this.underlineY = this.baselineOrigin.Y - this.glyphTypeface.UnderlinePosition * this.fontSizeEm;
-            this.underlineHeight = (this.cellHeight * this.glyphTypeface.UnderlineThickness);
-            this.cellRectangle = new Rect(new Size(this.cellWidth, this.cellHeight));
+            this.underlineHeight = (this.CellHeight * this.glyphTypeface.UnderlineThickness);
+            this.cellRectangle = new Rect(new Size(this.CellWidth, this.CellHeight));
 
             this.Resize();
         }
@@ -345,7 +346,7 @@ namespace condo
                             var backgroundBrush = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
                             var foregroundBrush = this.brushCache.GetBrush(fg.R, fg.G, fg.B);
 
-                            dc.DrawRectangle(backgroundBrush, null, new Rect(runStart * this.cellWidth, y * this.cellHeight, charCount * this.cellWidth, this.cellHeight));
+                            dc.DrawRectangle(backgroundBrush, null, new Rect(runStart * this.CellWidth, y * this.CellHeight, charCount * this.CellWidth, this.CellHeight));
 
                             // if all characters are null and we're at EOL stop after rendering only the background
                             // XXX: this feels REALLY hacky to me
@@ -354,10 +355,10 @@ namespace condo
                                 continue;
                             }
 
-                            var glyphOrigin = new Point((runStart * this.cellWidth) + this.baselineOrigin.X, (y * this.cellHeight) + this.baselineOrigin.Y);
+                            var glyphOrigin = new Point((runStart * this.CellWidth) + this.baselineOrigin.X, (y * this.CellHeight) + this.baselineOrigin.Y);
                             if (startChar.Underline)
                             {
-                                var underlineRectangle = new Rect(glyphOrigin.X, y * this.cellHeight + this.underlineY, charCount * this.cellWidth, this.underlineHeight);
+                                var underlineRectangle = new Rect(glyphOrigin.X, y * this.CellHeight + this.underlineY, charCount * this.CellWidth, this.underlineHeight);
                                 dc.DrawRectangle(foregroundBrush, null, underlineRectangle);
                             }
 

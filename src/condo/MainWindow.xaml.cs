@@ -4,6 +4,7 @@ namespace condo
     using System.ComponentModel;
     using System.Security;
     using System.Windows;
+    using System.Windows.Media;
     using ConsoleBuffer;
     using Microsoft.Win32;
 
@@ -57,6 +58,8 @@ namespace condo
             this.mellowPalette[14] = new Character.ColorInfo { R = 0x8a, G = 0xbe, B = 0xb7 };
             this.mellowPalette[15] = new Character.ColorInfo { R = 0xc5, G = 0xc8, B = 0xc6 };
             this.screen.Palette = this.mellowPalette;
+            // XXX: this is hacky but keeps things from being default ugly. ideally want to snap to cells while resizing window.
+            this.grid.Background = new SolidColorBrush(new Color { R = this.mellowPalette[0].R, G = this.mellowPalette[0].G, B = this.mellowPalette[0].B, A = 255 });
 
             this.Loaded += this.OnLoaded;
         }
@@ -132,21 +135,6 @@ namespace condo
 
             this.MinWidth = this.ActualWidth;
             this.MinHeight = this.ActualHeight;
-
-            /*
-            this.scrollViewer.SizeChanged += (sender, args) =>
-            {
-                Logger.Verbose($"sv resize n:{args.NewSize} p:{args.PreviousSize}");
-                //this.MinWidth = this.windowFrameWidth + args.NewSize.Width;
-                //this.MinHeight = this.windowFrameHeight + args.NewSize.Height;
-
-                args.Handled = true;
-            };
-            this.SizeChanged += (sender, args) =>
-            {
-                Logger.Verbose($"win resize n:{args.NewSize} p:{args.PreviousSize}");
-            };
-            */
         }
 
         private void HandleClosing(object sender, CancelEventArgs e)
