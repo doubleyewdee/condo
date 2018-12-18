@@ -14,7 +14,8 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ScrollViewer Name="scrollViewer" Grid.Column="0" Grid.Row="0"
-                      CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                      CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <local:Screen x:Name="screen" />
         </ScrollViewer>
     </Grid>

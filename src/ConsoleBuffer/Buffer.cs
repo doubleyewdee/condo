@@ -6,8 +6,8 @@ namespace ConsoleBuffer
 
     public sealed class Buffer : INotifyPropertyChanged
     {
-        private const int MinimumWidth = 80;
-        private const int MinimumHeight = 25;
+        public const int MinimumWidth = 80;
+        public const int MinimumHeight = 25;
 
         private readonly SequenceParser parser = new SequenceParser();
         private readonly CircularBuffer<Line> lines = new CircularBuffer<Line>(short.MaxValue);
@@ -99,15 +99,14 @@ namespace ConsoleBuffer
 
             lock (this.renderLock)
             {
-                var heightDiff = height - this.Height;
-                if (heightDiff != 0)
+                if (height != this.Height || width != this.Width)
                 {
-                    Logger.Verbose("poop");
+                    var heightDiff = height - this.Height;
+                    this.Width = (short)width;
+                    this.Height = (short)height;
+                    this.topVisibleLine -= heightDiff;
+                    this.OnPropertyChanged(nameof(this.ViewDimensions));
                 }
-                this.Width = (short)width;
-                this.Height = (short)height;
-                this.topVisibleLine -= heightDiff;
-                this.OnPropertyChanged(nameof(this.ViewDimensions));
             }
         }
 

@@ -133,6 +133,7 @@ namespace condo
             this.MinWidth = this.ActualWidth;
             this.MinHeight = this.ActualHeight;
 
+            /*
             this.scrollViewer.SizeChanged += (sender, args) =>
             {
                 Logger.Verbose($"sv resize n:{args.NewSize} p:{args.PreviousSize}");
@@ -145,6 +146,7 @@ namespace condo
             {
                 Logger.Verbose($"win resize n:{args.NewSize} p:{args.PreviousSize}");
             };
+            */
         }
 
         private void HandleClosing(object sender, CancelEventArgs e)

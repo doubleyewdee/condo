@@ -109,10 +109,6 @@ namespace condo
 
             this.SetFontSize(14);
             this.Resize();
-            this.SizeChanged += (sender, args) =>
-            {
-                Logger.Verbose($"screen size changed: n:{args.NewSize}; p:{args.PreviousSize}");
-            };
         }
 
         private void OnBufferPropertyChanged(object sender, PropertyChangedEventArgs args)
@@ -178,7 +174,14 @@ namespace condo
 
         protected override Size MeasureOverride(Size availableSize)
         {
-            return new Size(this.cellWidth * this.horizontalCells, this.cellHeight * this.verticalCells);
+            if (this.ActualHeight > availableSize.Height || this.ActualWidth > availableSize.Width)
+            {
+                var x = Math.Max(ConsoleBuffer.Buffer.MinimumWidth, (int)Math.Floor(availableSize.Width / this.cellWidth));
+                var y = Math.Max(ConsoleBuffer.Buffer.MinimumHeight, (int)Math.Floor(availableSize.Height / this.cellHeight));
+                return new Size(this.cellWidth * x, this.cellHeight * y);
+            }
+
+            return new Size(this.horizontalCells * this.cellWidth, this.verticalCells * this.cellHeight);
         }
 
         protected override Size ArrangeOverride(Size finalSize)
