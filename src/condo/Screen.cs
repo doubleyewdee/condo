@@ -4,6 +4,7 @@ namespace condo
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
+    using System.Text;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Controls.Primitives;
@@ -50,8 +51,10 @@ namespace condo
         private int horizontalCells, verticalCells;
         private Character[,] characters;
 
+        private bool selecting;
         private Point selectionStart;
         private Point selectionEnd;
+        private StringBuilder selectedString = new StringBuilder();
 
         private volatile int shouldRedraw;
         private int consoleBufferSize;
@@ -98,6 +101,12 @@ namespace condo
             this.MouseEnter += (sender, args) =>
             {
                 args.MouseDevice.OverrideCursor = Cursors.IBeam;
+                
+                // handles the case where the user released the mouse button outside the window.
+                if (this.selecting && args.LeftButton == MouseButtonState.Released)
+                {
+                    this.CompleteSelection();
+                }
             };
             this.MouseLeave += (sender, args) =>
             {
@@ -115,18 +124,25 @@ namespace condo
 
             this.MouseLeftButtonDown += (sender, args) =>
             {
-                this.selectionStart = args.GetPosition(this);
+                this.selecting = true;
+                this.selectionStart = this.selectionEnd = args.GetPosition(this);
                 args.Handled = true;
             };
             this.MouseLeftButtonUp += (sender, args) =>
             {
                 this.selectionEnd = args.GetPosition(this);
                 Logger.Verbose($"sel: start:{this.selectionStart}, end:{this.selectionEnd}");
+                this.selectionStart = this.selectionEnd = new Point(0, 0);
+                this.CompleteSelection();
                 args.Handled = true;
             };
             this.MouseMove += (sender, args) =>
             {
-                this.selectionEnd = args.GetPosition(this);
+                if (this.selecting)
+                {
+                    this.selectionEnd = args.GetPosition(this);
+                    this.shouldRedraw = 1;
+                }
             };
 
             this.SetFontSize(14);
@@ -324,8 +340,75 @@ namespace condo
                 dc.PushGuidelineSet(this.cellGuidelines);
 
                 this.RedrawText(dc);
+                this.RedrawSelection(dc);
 
                 dc.Pop();
+            }
+        }
+
+        private void RedrawSelection(DrawingContext dc)
+        {
+            // if the user is selecting from the bottom up treat that as our end point instead.
+            var startLine = this.selectionStart;
+            var endLine = this.selectionEnd;
+            if (startLine.Y > endLine.Y)
+            {
+                var swap = startLine;
+                startLine = endLine;
+                endLine = swap;
+            }
+
+            var left = startLine.X;
+            var right = endLine.X;
+            var top = startLine.Y;
+            var bottom = endLine.Y;
+
+            if (!this.selecting || (left == right && top == bottom))
+            {
+                return;
+            }
+
+            // walk every line, skipping those outside the range of the selection. For every selected character append it to
+            // our selected string data raw (this will be cleaned later) and draw appropriate per-line rectangles
+            this.selectedString.Clear();
+            for (var y = 0; y < this.verticalCells; ++y)
+            {
+                var lineTop = y * this.CellHeight;
+                var lineBottom = lineTop + this.CellHeight;
+                var drawLeft = 0.0;
+                var drawWidth = this.horizontalCells * this.CellWidth;
+
+                if (lineBottom < top || lineTop > bottom) continue; // line is outside the selection range.
+
+                if (lineTop <= top)
+                {
+                    drawLeft = startLine.X;
+                }
+
+                if (lineBottom >= bottom)
+                {
+                    drawWidth = right;
+                    if (drawLeft > 0.0)
+                    {
+                        // single line selects mean we might need to swap left/right actually.
+                        left = Math.Min(startLine.X, endLine.X);
+                        right = Math.Max(startLine.X, endLine.X);
+                        drawLeft = left;
+                        drawWidth = right - left;
+                    }
+                    drawWidth += drawWidth % this.CellWidth;
+                }
+
+                if (this.selectedString.Length > 0) this.selectedString.Append('\n');
+                for (var x = 0; x < this.horizontalCells; ++x)
+                {
+                    if (x * this.CellWidth >= drawLeft && (x + 1) * this.CellWidth <= drawLeft + drawWidth)
+                    {
+                        this.selectedString.Append((char)this.characters[x, y].Glyph);
+                    }
+                }
+
+                dc.DrawRectangle(new SolidColorBrush(new Color { R = 127, G = 127, B = 255, A = 95 }), null, new Rect(drawLeft, lineTop, drawWidth, this.CellHeight));
             }
         }
 
@@ -421,6 +504,21 @@ namespace condo
         public void RenderCharacter(Character c, int x, int y)
         {
             this.characters[x, y] = c;
+        }
+
+        private static readonly char[] PasteTrimChars = new[] { '\0', ' ', '\n' };
+        private void CompleteSelection()
+        {
+            var pasteText = new StringBuilder(this.selectedString.Length);
+            this.selecting = false;
+            // NB: this code could be more efficient but should not be frequently hit
+            foreach (var line in this.selectedString.ToString().Split('\n'))
+            {
+                if (pasteText.Length > 0) pasteText.Append('\n');
+                pasteText.Append(line.TrimEnd(PasteTrimChars));
+            }
+
+            Clipboard.SetText(pasteText.ToString());
         }
 
         #region IScrollInfo
