@@ -32,4 +32,9 @@ steps:
     command: test
     projects: '**/*Tests/*.csproj'
     arguments: '--configuration $(buildConfiguration)'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    artifactName: 'condo'
+    pathtoPublish: 'src/condo/bin/Release'
     
