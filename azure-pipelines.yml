@@ -35,7 +35,8 @@ steps:
 
 - task: CopyFiles@2
   inputs:
-    contents: 'src/condo/bin/Release/**'
+    sourceFolder: $(Build.SourcesDirectory)/src/condo/bin/Release
+    contents: '**'
     targetFolder: $(Build.ArtifactStagingDirectory)/release
 
 - task: PublishBuildArtifacts@1
