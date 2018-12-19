@@ -33,8 +33,13 @@ steps:
     projects: '**/*Tests/*.csproj'
     arguments: '--configuration $(buildConfiguration)'
 
+- task: CopyFiles@2
+  inputs:
+    contents: 'src/condo/bin/Release'
+    targetFolder: $(Build.ArtifactStagingDirectory)/release
+
 - task: PublishBuildArtifacts@1
   inputs:
     artifactName: 'condo'
-    pathtoPublish: 'src/condo/bin/Release'
+    pathtoPublish: $(Build.ArtifactStagingDirectory)/release
     
