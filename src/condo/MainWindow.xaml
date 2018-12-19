@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:condo"
         mc:Ignorable="d"
-        Title="MainWindow" SizeToContent="WidthAndHeight">
+        SizeToContent="WidthAndHeight"
+        Title="condo">
     <Grid Name="grid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -13,7 +14,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ScrollViewer Name="scrollViewer" Grid.Column="0" Grid.Row="0"
+        <ScrollViewer Name="scrollViewer" Grid.Column="1" Grid.Row="1"
                       CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False"
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <local:Screen x:Name="screen" />

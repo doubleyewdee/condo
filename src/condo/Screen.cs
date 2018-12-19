@@ -46,14 +46,19 @@ namespace condo
         private double underlineY;
         private double underlineHeight;
         private GuidelineSet cellGuidelines;
+
         private int horizontalCells, verticalCells;
         private Character[,] characters;
-        bool cursorInverted;
+
+        private Point selectionStart;
+        private Point selectionEnd;
+
         private volatile int shouldRedraw;
         private int consoleBufferSize;
         private readonly SolidBrushCache brushCache = new SolidBrushCache();
 
         private static readonly TimeSpan BlinkFrequency = TimeSpan.FromMilliseconds(250);
+        private bool cursorInverted;
         private readonly Stopwatch cursorBlinkWatch = new Stopwatch();
 
         /// <summary>
@@ -106,6 +111,22 @@ namespace condo
                     this.SetFontSize(this.fontSizeEm + factor);
                     args.Handled = true;
                 }
+            };
+
+            this.MouseLeftButtonDown += (sender, args) =>
+            {
+                this.selectionStart = args.GetPosition(this);
+                args.Handled = true;
+            };
+            this.MouseLeftButtonUp += (sender, args) =>
+            {
+                this.selectionEnd = args.GetPosition(this);
+                Logger.Verbose($"sel: start:{this.selectionStart}, end:{this.selectionEnd}");
+                args.Handled = true;
+            };
+            this.MouseMove += (sender, args) =>
+            {
+                this.selectionEnd = args.GetPosition(this);
             };
 
             this.SetFontSize(14);
@@ -297,98 +318,103 @@ namespace condo
         private void Redraw()
         {
             var dv = this.children[0] as DrawingVisual;
-            var glyphChars = new List<ushort>(this.horizontalCells);
-            var advanceWidths = new List<double>(this.horizontalCells);
 
             using (var dc = dv.RenderOpen())
             {
                 dc.PushGuidelineSet(this.cellGuidelines);
 
-                // Render line by line, attempting to render as long as properties remain the same or we reach the end of the line.
-                for (var y = 0; y < this.verticalCells; ++y)
-                {
-                    var runStart = 0;
-                    var x = 0;
-                    var allNull = true;
-                    var allEmpty = true;
-                    
-                    while (x < this.horizontalCells)
-                    {
-                        var currentGlyph = this.characters[x, y].Glyph;
-                        allNull &= currentGlyph == 0x0;
-                        allEmpty &= (currentGlyph == 0x0 || currentGlyph == 0x20);
-                        ++x;
-
-                        // Properties that can change and cause a run stop + render:
-                        // - Any of the basic character properties (bright/inverse/colors/etc)
-                        // - Hitting a visible cursor (as we may need to invert it explicitly -- we have to stop both at the cursor and immediately before it.)
-                        // - Hitting a "null" character (this may be a terminator for certain properties such as underlining/inverse/etc)
-                        if (   x == this.horizontalCells
-                            || !this.characters[runStart, y].PropertiesEqual(this.characters[x, y])
-                            || (this.RenderCursor && ((runStart, y) == this.Buffer.CursorPosition) || (x, y) == this.Buffer.CursorPosition)
-                            || (this.characters[x, y].Glyph == 0x0 && this.characters[runStart, y].Glyph != 0x0))
-                        {
-                            var charCount = x - runStart;
-                            var startChar = this.characters[runStart, y];
-                            var invert = startChar.Inverse && startChar.Glyph != 0x0;
-
-                            // this isn't super intuitive from the above but we'll stop a run if the cursor is visible so we can render it specially,
-                            // here that means potentially inverting it depending on our own 'blink' state.
-                            if (this.RenderCursor && charCount == 1 && (runStart, y) == this.Buffer.CursorPosition && this.cursorInverted)
-                            {
-                                invert = !invert;
-                            }
-
-                            Character.ColorInfo fg, bg;
-                            if (!invert) (fg, bg) = this.GetCharacterColors(startChar);
-                            else (bg, fg) = this.GetCharacterColors(startChar);
-
-                            var backgroundBrush = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
-                            var foregroundBrush = this.brushCache.GetBrush(fg.R, fg.G, fg.B);
-
-                            dc.DrawRectangle(backgroundBrush, null, new Rect(runStart * this.CellWidth, y * this.CellHeight, charCount * this.CellWidth, this.CellHeight));
-
-                            // if all characters are null and we're at EOL stop after rendering only the background
-                            // XXX: this feels REALLY hacky to me
-                            if (x == this.horizontalCells && allNull)
-                            {
-                                continue;
-                            }
-
-                            var glyphOrigin = new Point((runStart * this.CellWidth) + this.baselineOrigin.X, (y * this.CellHeight) + this.baselineOrigin.Y);
-                            if (startChar.Underline)
-                            {
-                                var underlineRectangle = new Rect(glyphOrigin.X, y * this.CellHeight + this.underlineY, charCount * this.CellWidth, this.underlineHeight);
-                                dc.DrawRectangle(foregroundBrush, null, underlineRectangle);
-                            }
-
-                            glyphChars.Clear();
-                            advanceWidths.Clear();
-                            for (var c = runStart; c < x; ++c)
-                            {
-                                if (!this.glyphTypeface.CharacterToGlyphMap.TryGetValue((char)this.characters[c, y].Glyph, out var glyphIndex))
-                                {
-                                    glyphIndex = 0;
-                                }
-                                glyphChars.Add(glyphIndex);
-                                advanceWidths.Add(this.glyphTypeface.AdvanceWidths[glyphIndex] * this.fontSizeEm);
-                            }
-
-                            if (!allEmpty)
-                            {
-                                var gr = new GlyphRun(this.glyphTypeface, 0, false, this.fontSizeEm, (float)this.dpiInfo.PixelsPerDip, new List<ushort>(glyphChars),
-                                    glyphOrigin, new List<double>(advanceWidths), null, null, null, null, null, null);
-
-                                dc.DrawGlyphRun(foregroundBrush, gr);
-                            }
-
-                            runStart = x;
-                            allNull = allEmpty = true;
-                        }
-                    }
-                }
+                this.RedrawText(dc);
 
                 dc.Pop();
+            }
+        }
+
+        private void RedrawText(DrawingContext dc)
+        {
+            var glyphChars = new List<ushort>(this.horizontalCells);
+            var advanceWidths = new List<double>(this.horizontalCells);
+            // Render line by line, attempting to render as long as properties remain the same or we reach the end of the line.
+            for (var y = 0; y < this.verticalCells; ++y)
+            {
+                var runStart = 0;
+                var x = 0;
+                var allNull = true;
+                var allEmpty = true;
+
+                while (x < this.horizontalCells)
+                {
+                    var currentGlyph = this.characters[x, y].Glyph;
+                    allNull &= currentGlyph == 0x0;
+                    allEmpty &= (currentGlyph == 0x0 || currentGlyph == 0x20);
+                    ++x;
+
+                    // Properties that can change and cause a run stop + render:
+                    // - Any of the basic character properties (bright/inverse/colors/etc)
+                    // - Hitting a visible cursor (as we may need to invert it explicitly -- we have to stop both at the cursor and immediately before it.)
+                    // - Hitting a "null" character (this may be a terminator for certain properties such as underlining/inverse/etc)
+                    if (x == this.horizontalCells
+                        || !this.characters[runStart, y].PropertiesEqual(this.characters[x, y])
+                        || (this.RenderCursor && ((runStart, y) == this.Buffer.CursorPosition) || (x, y) == this.Buffer.CursorPosition)
+                        || (this.characters[x, y].Glyph == 0x0 && this.characters[runStart, y].Glyph != 0x0))
+                    {
+                        var charCount = x - runStart;
+                        var startChar = this.characters[runStart, y];
+                        var invert = startChar.Inverse && startChar.Glyph != 0x0;
+
+                        // this isn't super intuitive from the above but we'll stop a run if the cursor is visible so we can render it specially,
+                        // here that means potentially inverting it depending on our own 'blink' state.
+                        if (this.RenderCursor && charCount == 1 && (runStart, y) == this.Buffer.CursorPosition && this.cursorInverted)
+                        {
+                            invert = !invert;
+                        }
+
+                        Character.ColorInfo fg, bg;
+                        if (!invert) (fg, bg) = this.GetCharacterColors(startChar);
+                        else (bg, fg) = this.GetCharacterColors(startChar);
+
+                        var backgroundBrush = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
+                        var foregroundBrush = this.brushCache.GetBrush(fg.R, fg.G, fg.B);
+
+                        dc.DrawRectangle(backgroundBrush, null, new Rect(runStart * this.CellWidth, y * this.CellHeight, charCount * this.CellWidth, this.CellHeight));
+
+                        // if all characters are null and we're at EOL stop after rendering only the background
+                        // XXX: this feels REALLY hacky to me
+                        if (x == this.horizontalCells && allNull)
+                        {
+                            continue;
+                        }
+
+                        var glyphOrigin = new Point((runStart * this.CellWidth) + this.baselineOrigin.X, (y * this.CellHeight) + this.baselineOrigin.Y);
+                        if (startChar.Underline)
+                        {
+                            var underlineRectangle = new Rect(glyphOrigin.X, y * this.CellHeight + this.underlineY, charCount * this.CellWidth, this.underlineHeight);
+                            dc.DrawRectangle(foregroundBrush, null, underlineRectangle);
+                        }
+
+                        glyphChars.Clear();
+                        advanceWidths.Clear();
+                        for (var c = runStart; c < x; ++c)
+                        {
+                            if (!this.glyphTypeface.CharacterToGlyphMap.TryGetValue((char)this.characters[c, y].Glyph, out var glyphIndex))
+                            {
+                                glyphIndex = 0;
+                            }
+                            glyphChars.Add(glyphIndex);
+                            advanceWidths.Add(this.glyphTypeface.AdvanceWidths[glyphIndex] * this.fontSizeEm);
+                        }
+
+                        if (!allEmpty)
+                        {
+                            var gr = new GlyphRun(this.glyphTypeface, 0, false, this.fontSizeEm, (float)this.dpiInfo.PixelsPerDip, new List<ushort>(glyphChars),
+                                glyphOrigin, new List<double>(advanceWidths), null, null, null, null, null, null);
+
+                            dc.DrawGlyphRun(foregroundBrush, gr);
+                        }
+
+                        runStart = x;
+                        allNull = allEmpty = true;
+                    }
+                }
             }
         }
 
