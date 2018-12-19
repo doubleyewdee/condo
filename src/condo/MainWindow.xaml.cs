@@ -106,6 +106,15 @@ namespace condo
             this.KeyDown += this.keyHandler.OnKeyDown;
             this.KeyDown += (_, args) => this.screen.VerticalOffset = double.MaxValue; // force scroll on keypress.
             this.TextInput += this.keyHandler.OnTextInput;
+            // XXX: a very hacky paste!
+            this.MouseRightButtonDown += (_, args) =>
+            {
+                var text = Clipboard.GetData(DataFormats.Text) as string;
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    this.console.SendText(System.Text.Encoding.UTF8.GetBytes(text));
+                }
+            };
 
             this.console.PropertyChanged += (_, args) =>
             {
