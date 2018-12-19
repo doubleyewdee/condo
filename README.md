@@ -1,3 +1,5 @@
+[![Build Status](https://doubleyewdee.visualstudio.com/condo/_apis/build/status/doubleyewdee.condo?branchName=master)](https://doubleyewdee.visualstudio.com/condo/_build/latest?definitionId=4?branchName=master)
+
 # WPF command line shell using Windows ConPTY
 
 This is a WPF wrapper on Windows command line applications invoked using the new and very cool
