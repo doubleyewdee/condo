@@ -62,7 +62,7 @@ namespace ConsoleBuffer.Commands
             var p = 0;
             while (p < this.Parameters.Count)
             {
-                var pValue = this.ParameterToNumber(p, defaultValue: -1);
+                var pValue = this.Parameters.GetValue(p, -1);
                 switch (pValue)
                 {
                 case 0:
@@ -190,14 +190,14 @@ namespace ConsoleBuffer.Commands
             color = new Character.ColorInfo();
             if (++p < this.Parameters.Count)
             {
-                var subCommand = this.ParameterToNumber(p, defaultValue: -1);
+                var subCommand = this.Parameters.GetValue(p, -1);
                 if (subCommand == 2)
                 {
                     var colorValues = new int[3];
                     for (var i = 0; i < colorValues.Length; ++i) // prime candidate for funrolling of loops
                     {
                         ++p;
-                        colorValues[i] = this.ParameterToNumber(p, defaultValue: -1, maxValue: int.MaxValue);
+                        colorValues[i] = this.Parameters.GetValue(p, -1);
                         if (colorValues[i] < 0 || colorValues[i] > 255)
                         {
                             return false;
@@ -209,7 +209,7 @@ namespace ConsoleBuffer.Commands
                 else if (subCommand == 5)
                 {
                     ++p;
-                    value = this.ParameterToNumber(p, defaultValue: -1, maxValue: int.MaxValue);
+                    value = this.Parameters.GetValue(p, -1);
                     return value > -1 && value < 256;
                 }
             }

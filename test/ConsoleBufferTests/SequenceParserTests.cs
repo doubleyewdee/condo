@@ -1,5 +1,6 @@
 namespace ConsoleBufferTests
 {
+    using System;
     using ConsoleBuffer;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -14,6 +15,33 @@ namespace ConsoleBufferTests
             {
                 Assert.AreEqual(ParserAppendResult.Render, parser.Append(c));
             }
+        }
+
+        [TestMethod]
+        [DataRow("f")]
+        [DataRow("ba")]
+        [DataRow("12g32")]
+        [DataRow("-y")]
+        [DataRow("-3a")]
+        [DataRow("3a-")]
+        [DataRow("3;f")]
+        [DataRow("f;3")]
+        public void BadCharacters(string data)
+        {
+            var command = $"\x1b[{data}X";
+
+            Assert.ThrowsException<AssertFailedException>(() => { this.EnsureCommandParses(command); });
+            
+        }
+
+        [TestMethod]
+        [DataRow("1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34")]
+        public void BadParameterList(string data)
+        {
+            var command = $"\x1b[{data}X";
+
+            Assert.ThrowsException<IndexOutOfRangeException>(() => { this.EnsureCommandParses(command); });
+
         }
 
         [TestMethod]

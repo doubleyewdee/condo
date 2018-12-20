@@ -27,12 +27,12 @@ namespace ConsoleBuffer.Commands
 
             if (this.Parameters.Count == 1)
             {
-                switch (this.Parameters[0])
+                switch (this.Parameters.GetValue(0))
                 {
-                case "12":
+                case 12:
                     this.Setting = Parameter.CursorBlink;
                     break;
-                case "25":
+                case 25:
                     this.Setting = Parameter.CursorShow;
                     break;
                 }

@@ -8,7 +8,7 @@ namespace ConsoleBuffer.Commands
 
         public EraseCharacter(string bufferData) : base(bufferData)
         {
-            this.Count = this.ParameterToNumber(0, defaultValue: 1);
+            this.Count = this.Parameters.GetValue(0, defaultValue: 1); 
         }
     }
 }
