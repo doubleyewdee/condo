@@ -31,7 +31,6 @@ namespace ConsoleBufferTests
             var command = $"\x1b[{data}X";
 
             Assert.ThrowsException<AssertFailedException>(() => { this.EnsureCommandParses(command); });
-            
         }
 
         [TestMethod]
@@ -41,7 +40,6 @@ namespace ConsoleBufferTests
             var command = $"\x1b[{data}X";
 
             Assert.ThrowsException<IndexOutOfRangeException>(() => { this.EnsureCommandParses(command); });
-
         }
 
         [TestMethod]
