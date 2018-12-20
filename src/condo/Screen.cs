@@ -28,6 +28,14 @@ namespace condo
                 this.buffer = value ?? throw new ArgumentNullException(nameof(value));
                 this.Resize();
                 this.buffer.PropertyChanged += this.OnBufferPropertyChanged;
+
+                // XXX: this is a bit of a hack to ensure our scrollviewer's background is the same as our default screen
+                // background and deals with odd resizing where our contents don't perfectly fit.
+                if (this.ScrollOwner != null)
+                {
+                    var bg = this.Palette[0];
+                    this.ScrollOwner.Background = this.brushCache.GetBrush(bg.R, bg.G, bg.B);
+                }
             }
         }
 

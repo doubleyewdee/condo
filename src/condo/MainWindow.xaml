@@ -7,17 +7,25 @@
         mc:Ignorable="d"
         SizeToContent="WidthAndHeight"
         Title="condo">
-    <Grid Name="grid">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <ScrollViewer Name="scrollViewer" Grid.Column="1" Grid.Row="1"
+    <DockPanel>
+        <!-- placeholder for super cool status bar stuff I'll get to later. -->
+        <StatusBar Name="statusBar" DockPanel.Dock="Bottom">
+            <StatusBarItem>Status</StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">More Status</StatusBarItem>
+        </StatusBar>
+
+        <!-- We don't want the tab control to actually show content because we share the same Screen viewer for performance
+             reasons. As a result we manually handle tab selection and switch the screen ourselves. -->
+        <Grid DockPanel.Dock="Top">
+            <TabControl Name="tabs" DockPanel.Dock="Top" Padding="0">
+                <TabItem Header="Demo"></TabItem>
+            </TabControl>
+        </Grid>
+
+        <ScrollViewer Name="scrollViewer"
                       CanContentScroll="true" IsDeferredScrollingEnabled="true" Focusable="False"
                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <local:Screen x:Name="screen" />
         </ScrollViewer>
-    </Grid>
+    </DockPanel>
 </Window>

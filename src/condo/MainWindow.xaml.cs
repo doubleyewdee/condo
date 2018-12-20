@@ -59,7 +59,7 @@ namespace condo
             this.mellowPalette[15] = new Character.ColorInfo { R = 0xc5, G = 0xc8, B = 0xc6 };
             this.screen.Palette = this.mellowPalette;
             // XXX: this is hacky but keeps things from being default ugly. ideally want to snap to cells while resizing window.
-            this.grid.Background = new SolidColorBrush(new Color { R = this.mellowPalette[0].R, G = this.mellowPalette[0].G, B = this.mellowPalette[0].B, A = 255 });
+            this.scrollViewer.Background = new SolidColorBrush(new Color { R = this.mellowPalette[0].R, G = this.mellowPalette[0].G, B = this.mellowPalette[0].B, A = 255 });
 
             this.Loaded += this.OnLoaded;
         }
@@ -78,7 +78,6 @@ namespace condo
                 return;
             }
 
-            this.InitializeWindowSizeHandling();
             this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
 
@@ -137,14 +136,6 @@ namespace condo
         }
 
         private double windowFrameWidth, windowFrameHeight;
-        private void InitializeWindowSizeHandling()
-        {
-            this.windowFrameWidth = this.ActualWidth - this.grid.ActualWidth;
-            this.windowFrameHeight = this.ActualHeight - this.grid.ActualHeight;
-
-            this.MinWidth = this.ActualWidth;
-            this.MinHeight = this.ActualHeight;
-        }
 
         private void HandleClosing(object sender, CancelEventArgs e)
         {
