@@ -4,6 +4,7 @@ namespace condo
     using System.ComponentModel;
     using System.Security;
     using System.Windows;
+    using System.Windows.Controls;
     using System.Windows.Media;
     using ConsoleBuffer;
     using Microsoft.Win32;
@@ -58,8 +59,6 @@ namespace condo
             this.mellowPalette[14] = new Character.ColorInfo { R = 0x8a, G = 0xbe, B = 0xb7 };
             this.mellowPalette[15] = new Character.ColorInfo { R = 0xc5, G = 0xc8, B = 0xc6 };
             this.screen.Palette = this.mellowPalette;
-            // XXX: this is hacky but keeps things from being default ugly. ideally want to snap to cells while resizing window.
-            this.scrollViewer.Background = new SolidColorBrush(new Color { R = this.mellowPalette[0].R, G = this.mellowPalette[0].G, B = this.mellowPalette[0].B, A = 255 });
 
             this.Loaded += this.OnLoaded;
         }
@@ -136,6 +135,34 @@ namespace condo
         }
 
         private double windowFrameWidth, windowFrameHeight;
+
+        private void AddTabButton(object sender, RoutedEventArgs e)
+        {
+            var newTab = new Label();
+            newTab.Content = $"tab {this.tabs.Children.Count}";
+            this.tabs.Children.Add(newTab);
+            newTab.BringIntoView();
+        }
+
+        private void MinimizeButton(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = WindowState.Minimized;
+        }
+
+        private void MaximizeButton(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = WindowState.Maximized;
+        }
+
+        private void CloseButton(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
+        private void TabsEnableDragMove(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            this.DragMove();
+        }
 
         private void HandleClosing(object sender, CancelEventArgs e)
         {
