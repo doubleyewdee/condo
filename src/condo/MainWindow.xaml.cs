@@ -1,11 +1,9 @@
 namespace condo
 {
-    using System;
     using System.ComponentModel;
     using System.Security;
     using System.Windows;
     using System.Windows.Controls;
-    using System.Windows.Media;
     using ConsoleBuffer;
     using Microsoft.Win32;
 
@@ -16,7 +14,8 @@ namespace condo
     {
         private const int MinimumWindowsVersion = 17763;
         private readonly XtermPalette mellowPalette;
-        private ConsoleWrapper console;
+        private readonly ConsoleManager consoleManager = new ConsoleManager();
+        private ConsoleWrapper console; // XXX: needs to deal with multiple consoles.
         private KeyHandler keyHandler;
 
         private bool IsOSVersionSupported()
@@ -77,7 +76,7 @@ namespace condo
                 return;
             }
 
-            this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
+            this.console = this.consoleManager.Create("wsl.exe").ConsoleWrapper;
             this.keyHandler = new KeyHandler(this.console);
 
 #if DEBUG
@@ -133,8 +132,6 @@ namespace condo
 
             this.Closing += this.HandleClosing;
         }
-
-        private double windowFrameWidth, windowFrameHeight;
 
         private void AddTabButton(object sender, RoutedEventArgs e)
         {

@@ -64,7 +64,7 @@
     <Compile Include="KeyHandler.cs" />
     <Compile Include="Screen.cs" />
     <Compile Include="SolidBrushCache.cs" />
-    <Compile Include="TerminalManager.cs" />
+    <Compile Include="ConsoleManager.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
