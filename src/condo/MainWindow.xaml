@@ -8,42 +8,49 @@
         SizeToContent="WidthAndHeight"
         WindowStyle="None" AllowsTransparency="true"
         Title="condo">
+  <Window.Resources>
+    <ResourceDictionary Source="Resources.xaml" />
+  </Window.Resources>
+
   <DockPanel>
     <!-- placeholder for super cool status bar stuff I'll get to later. -->
     <StatusBar Name="statusBar" DockPanel.Dock="Bottom" MouseLeftButtonDown="TabsEnableDragMove"
-                   Width="{Binding ElementName=screenContainer, Path=ActualWidth}">
+               Width="{Binding ElementName=screenContainer, Path=ActualWidth}">
       <StatusBarItem>Status</StatusBarItem>
       <StatusBarItem HorizontalAlignment="Right">More Status</StatusBarItem>
     </StatusBar>
 
-    <Grid DockPanel.Dock="Top">
-      <Grid Name="verticalWindowControls" Visibility="Collapsed">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <!-- 30 height is seemingly the same height as a normal title bar in Windows 10. -->
+    <Grid Name="Header"
+          DockPanel.Dock="Top"
+          Height="30"
+          Width="{Binding ElementName=screenContainer, Path=ActualWidth}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <Button Grid.Column="0" Grid.Row="0">
+        <StaticResource ResourceKey="Logo" />
+      </Button>
+
+      <Grid Grid.Column="1" Grid.Row="0"
+            Margin="15,0,15,0" MouseLeftButtonDown="TabsEnableDragMove">
         <Grid.ColumnDefinitions>
-          <ColumnDefinition />
-        </Grid.ColumnDefinitions>
-        <Button Grid.Column="0" Grid.Row="0" Click="CloseButton">X</Button>
-        <Button Grid.Column="0" Grid.Row="1" Click="MinimizeButton">_</Button>
-        <Button Grid.Column="0" Grid.Row="2" Click="MaximizeButton">!</Button>
-        <Button Grid.Column="0" Grid.Row="3" Click="AddTabButton">+</Button>
-      </Grid>
-      <Grid>
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="{Binding ElementName=screenContainer, Path=ActualWidth}"/>
+          <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
           <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ScrollViewer Name="tabScroller"
-                              HorizontalScrollBarVisibility="Hidden"
-                              HorizontalAlignment="Stretch"
-                              VerticalScrollBarVisibility="Disabled"
-                              Grid.Row="0" Grid.Column="0">
+                      HorizontalScrollBarVisibility="Hidden"
+                      HorizontalAlignment="Stretch"
+                      VerticalScrollBarVisibility="Disabled"
+                      Grid.Row="0" Grid.Column="0">
           <StackPanel Name="tabs" Orientation="Horizontal">
             <Label>Long Tab Name 1</Label>
             <Label>Long Tab Name 2</Label>
@@ -56,20 +63,36 @@
           </StackPanel>
         </ScrollViewer>
       </Grid>
-      <Grid Name="horizontalWindowControls" HorizontalAlignment="Right">
+      <Grid Name="horizontalWindowControls" Grid.Column="2" Grid.Row="0">
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-          <RowDefinition />
+          <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Button Grid.Column="0" Grid.Row="0" Click="AddTabButton">+</Button>
-        <Button Grid.Column="1" Grid.Row="0" Click="MinimizeButton">_</Button>
-        <Button Grid.Column="2" Grid.Row="0" Click="MaximizeButton">!</Button>
-        <Button Grid.Column="3" Grid.Row="0" Click="CloseButton">X</Button>
+        <!--
+        <Button Grid.Column="0" Grid.Row="0" Click="AddTabButton">
+          <Image Source="{StaticResource New Tab}" />
+        </Button>
+        <Button Grid.Column="1" Grid.Row="0" Click="MinimizeButton">
+          <Image Source="{StaticResource Minimize}" />
+        </Button>
+        <Button Grid.Column="2" Grid.Row="0" Click="MaximizeButton">
+          <Image Source="{StaticResource Minimize}" />
+        </Button>
+        <Button Grid.Column="3" Grid.Row="0" Click="CloseButton">
+          <Image Source="{StaticResource Minimize}" />
+        </Button>
+        -->
+        <Button Grid.Column="3" Grid.Row="0"
+          Command="{Binding Source={x:Static SystemCommands.CloseWindowCommand}}">
+          <Grid>
+            <Path Width="10" Height="10" Data="M0,0 L10,10 M10,0 L0,10 Z" Stroke="Black" StrokeThickness="2" />
+          </Grid>
+        </Button>
       </Grid>
     </Grid>
 

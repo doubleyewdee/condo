@@ -65,6 +65,10 @@
     <Compile Include="Screen.cs" />
     <Compile Include="SolidBrushCache.cs" />
     <Compile Include="ConsoleManager.cs" />
+    <Page Include="Resources.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -112,6 +116,11 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="..\Resources\Icon\Condo.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="..\Resources\Icon\Condo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

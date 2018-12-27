@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:condo">
+  <Image x:Key="Logo" Source="Condo.png" />
+
+  <DrawingImage x:Key="New Tab">
+    <DrawingImage.Drawing>
+      <GeometryDrawing>
+        <GeometryDrawing.Pen>
+          <Pen Brush="Black" Thickness="4" />
+        </GeometryDrawing.Pen>
+        <GeometryDrawing.Geometry>
+          <GeometryGroup>
+            <LineGeometry StartPoint="0,50" EndPoint="100,50" />
+            <LineGeometry StartPoint="50,0" EndPoint="50,100" />
+          </GeometryGroup>
+        </GeometryDrawing.Geometry>
+      </GeometryDrawing>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
+  <DrawingImage x:Key="Minimize">
+    <DrawingImage.Drawing>
+      <GeometryDrawing>
+        <GeometryDrawing.Pen>
+          <Pen Brush="Black" Thickness="4" />
+        </GeometryDrawing.Pen>
+        <GeometryDrawing.Geometry>
+          <GeometryGroup>
+            <LineGeometry StartPoint="0,80" EndPoint="100,80"/>
+          </GeometryGroup>
+        </GeometryDrawing.Geometry>
+      </GeometryDrawing>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
+  <Button x:Key="Window Close" Command="{Binding Source={x:Static SystemCommands.CloseWindowCommand}}">
+    <Grid>
+      <Path Width="10" Height="10" Data="M0,0 L10,10 M10,0 L0,10 Z" Stroke="Black" StrokeThickness="2" />
+    </Grid>
+  </Button>
+</ResourceDictionary>
