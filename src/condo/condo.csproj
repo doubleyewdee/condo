@@ -63,6 +63,7 @@
     </ApplicationDefinition>
     <Compile Include="KeyHandler.cs" />
     <Compile Include="Screen.cs" />
+    <Compile Include="ScrollableTabs.cs" />
     <Compile Include="SolidBrushCache.cs" />
     <Compile Include="ConsoleManager.cs" />
     <Page Include="Resources.xaml">
@@ -81,6 +82,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Themes\Generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
