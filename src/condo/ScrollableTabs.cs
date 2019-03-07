@@ -15,8 +15,20 @@ namespace condo
     using System.Windows.Navigation;
     using System.Windows.Shapes;
 
-    public sealed class ScrollableTabs : ContentControl
+    /// <summary>
+    /// Scrollable tab control with 
+    /// </summary>
+    public sealed class ScrollableTabs : Panel
     {
+        public Orientation Orientation
+        {
+            get { return (Orientation)this.GetValue(OrientationProperty); }
+            set { this.SetValue(OrientationProperty, value); }
+        }
+
+        public static readonly DependencyProperty OrientationProperty =
+            DependencyProperty.Register("Orientation", typeof(Orientation), typeof(ScrollableTabs), new PropertyMetadata(0));
+
         static ScrollableTabs()
         {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(ScrollableTabs), new FrameworkPropertyMetadata(typeof(ScrollableTabs)));
@@ -34,7 +46,6 @@ namespace condo
             this.scrollDownContent = new ContentPresenter();
             this.AddVisualChild(this.scrollUpContent);
             this.AddVisualChild(this.scrollDownContent);
-
         }
     }
 }
