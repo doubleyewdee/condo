@@ -12,7 +12,7 @@ namespace condo
     using System.Windows.Media;
     using ConsoleBuffer;
 
-    public sealed class Screen : FrameworkElement, IRenderTarget, IScrollInfo
+    sealed class Screen : FrameworkElement, IRenderTarget, IScrollInfo
     {
         private ConsoleBuffer.Buffer buffer;
         public ConsoleBuffer.Buffer Buffer
@@ -67,7 +67,7 @@ namespace condo
         /// <summary>
         /// Empty ctor for designer purposes at present. Probably don't use.
         /// </summary>
-        public Screen() : this(new ConsoleBuffer.Buffer(80, 25))
+        public Screen() : this(new ConsoleBuffer.Buffer(80, 25), new Configuration())
         {
 #if DEBUG
             for (var i = 0; i < 100; ++i)
@@ -89,7 +89,7 @@ namespace condo
 #endif
         }
 
-        public Screen(ConsoleBuffer.Buffer buffer)
+        public Screen(ConsoleBuffer.Buffer buffer, Configuration configuration)
         {
             this.dpiInfo = VisualTreeHelper.GetDpi(this);
             this.children = new VisualCollection(this) { new DrawingVisual { Offset = new Vector(0, 0) } };
@@ -117,7 +117,7 @@ namespace condo
                 if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
                 {
                     var factor = args.Delta > 0 ? 2 : -2;
-                    this.SetFontSize(this.fontSizeEm + factor);
+                    this.SetFontValues(this.fontSizeEm + factor, this.typeface);
                     args.Handled = true;
                 }
             };
@@ -145,8 +145,12 @@ namespace condo
                 }
             };
 
-            this.SetFontSize(14);
-            this.Resize();
+            this.SetConfiguration(configuration);
+        }
+
+        public void SetConfiguration(Configuration configuration)
+        {
+            this.SetFontValues(configuration.FontSize, new Typeface(configuration.FontFamily)); // TODO: do something if we can't find the desired font.
         }
 
         private void OnBufferPropertyChanged(object sender, PropertyChangedEventArgs args)
@@ -254,18 +258,16 @@ namespace condo
             this.shouldRedraw = 1;
         }
 
-        private void SetFontSize(int newFontSizeEm)
+        private void SetFontValues(int newFontSize, Typeface newTypeface)
         {
-            newFontSizeEm = Math.Max(8, Math.Min(72, newFontSizeEm));
-
-            if (this.fontSizeEm == newFontSizeEm)
+            var newFontSizeEm = Math.Max(8, Math.Min(72, newFontSize));
+            if (this.fontSizeEm == newFontSizeEm && this.typeface == newTypeface)
             {
                 return;
             }
 
             this.fontSizeEm = newFontSizeEm;
-
-            this.typeface = new Typeface("Consolas"); // TODO: do something if we can't find this.
+            this.typeface = newTypeface;
             if (!this.typeface.TryGetGlyphTypeface(out this.glyphTypeface))
             {
                 throw new InvalidOperationException("Could not get desired font.");

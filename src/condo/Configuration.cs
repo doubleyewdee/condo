@@ -5,10 +5,16 @@ namespace condo
     using Newtonsoft.Json;
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    sealed class Configuration
+    sealed class Configuration : IDisposable
     {
         private const string AppDataFolder = "condo";
         private const string SettingsFilename = "settings.json";
+        private FileSystemWatcher fileWatcher;
+
+        /// <summary>
+        /// Raised when the underlying configuration file changes (even if the contents did not).
+        /// </summary>
+        public EventHandler Changed;
 
         [JsonProperty]
         public string FontFamily { get; set; } = "Consolas";
@@ -24,7 +30,8 @@ namespace condo
             Configuration config;
             try
             {
-                using (var stream = File.OpenText(filename))
+                using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var stream = new StreamReader(fs))
                 {
                     ConsoleBuffer.Logger.Verbose($"Writing configuration to {filename}");
                     var reader = new JsonSerializer();
@@ -39,6 +46,7 @@ namespace condo
             }
 
             config.Filename = filename;
+            config.StartWatch();
             return config;
         }
 
@@ -47,7 +55,12 @@ namespace condo
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppDataFolder, SettingsFilename);
         }
 
-        public void Save(string filename)
+        public void ShellOpen()
+        {
+            System.Diagnostics.Process.Start(this.Filename);
+        }
+
+        private void Save(string filename)
         {
             var directoryName = Path.GetDirectoryName(filename);
             if (!Directory.Exists(directoryName))
@@ -64,9 +77,44 @@ namespace condo
             }
         }
 
-        public void ShellOpen()
+        private void StartWatch()
         {
-            System.Diagnostics.Process.Start(this.Filename);
+            this.fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(this.Filename), Path.GetFileName(this.Filename));
+            this.fileWatcher.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.LastWrite | NotifyFilters.Size;
+            this.fileWatcher.Changed += this.OnFileChanged;
+            this.fileWatcher.Created += this.OnFileChanged;
+            this.fileWatcher.EnableRaisingEvents = true;
         }
+
+        private void OnFileChanged(object sender, EventArgs args)
+        {
+            this.Changed?.Invoke(this, null);
+        }
+
+        #region IDisposable Support
+        private bool disposed = false; // To detect redundant calls
+
+        void Dispose(bool disposing)
+        {
+            if (!this.disposed)
+            {
+                if (disposing)
+                {
+                    if (this.fileWatcher != null)
+                    {
+                        this.fileWatcher.Dispose();
+                        this.fileWatcher = null;
+                    }
+                }
+
+                this.disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            this.Dispose(true);
+        }
+        #endregion
     }
 }

@@ -104,7 +104,12 @@ namespace ConsoleBuffer
                     var heightDiff = height - this.Height;
                     this.Width = (short)width;
                     this.Height = (short)height;
-                    this.topVisibleLine -= heightDiff;
+                    while (this.lines.Size < this.Height)
+                    {
+                        this.lines.PushBack(new Line());
+                    }
+
+                    this.topVisibleLine = Math.Max(0, this.topVisibleLine - heightDiff);
                     this.OnPropertyChanged(nameof(this.ViewDimensions));
                 }
             }

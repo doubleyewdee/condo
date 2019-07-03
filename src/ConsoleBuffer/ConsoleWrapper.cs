@@ -71,7 +71,7 @@ namespace ConsoleBuffer
                     {
                         this.Width = this.Buffer.Width;
                         this.Height = this.Buffer.Height;
-                        NativeMethods.ResizePseudoConsole(this.consoleHandle, new NativeMethods.COORD { X = this.Width, Y = this.Height });
+                        this.UpdateDimensions(this.Height, this.Width);
                     }
                 }
             };

@@ -12,8 +12,8 @@ namespace condo
         public App()
         {
             //ConsoleBuffer.Logger.Init(Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), @"Source\Repos\wincon\wincon.log"));
-            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            AppDomain.CurrentDomain.UnhandledException += this.OnUnhandledException;
+            TaskScheduler.UnobservedTaskException += this.TaskScheduler_UnobservedTaskException;
         }
 
         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)

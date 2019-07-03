@@ -80,7 +80,8 @@ namespace condo
             }
 
             this.InitializeWindowSizeHandling();
-            this.configuration = Configuration.Load(Configuration.GetDefaultFilename());
+            this.HandleConfigurationChanged(null, null);
+
             this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
             this.keyHandler.KeyboardShortcut += this.HandleKeyboardShortcut;
@@ -124,7 +125,7 @@ namespace condo
                 if (args.PropertyName == "Running" && this.console != null && this.console.Running == false)
                 {
                     var msg = System.Text.Encoding.UTF8.GetBytes($"\r\n[process terminated with code {this.console.ProcessExitCode}, press <enter> to exit.]");
-                    this.screen.Buffer.Append(msg, msg.Length);
+                    this.screen?.Buffer.Append(msg, msg.Length);
 
                     this.KeyDown += (keySender, keyArgs) =>
                     {
@@ -165,6 +166,20 @@ namespace condo
             case KeyboardShortcut.OpenConfig:
                 this.configuration.ShellOpen();
                 break;
+            }
+        }
+
+        private void HandleConfigurationChanged(object sender, EventArgs args)
+        {
+            var currentConfig = (Configuration)sender;
+
+            this.configuration = Configuration.Load(currentConfig != null ? currentConfig.Filename : Configuration.GetDefaultFilename());
+            this.configuration.Changed += this.HandleConfigurationChanged;
+            this.screen.SetConfiguration(this.configuration);
+            if (currentConfig != null)
+            {
+                currentConfig.Changed -= this.HandleConfigurationChanged;
+                currentConfig.Dispose();
             }
         }
     }
