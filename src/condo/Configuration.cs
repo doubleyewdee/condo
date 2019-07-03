@@ -63,5 +63,10 @@ namespace condo
                 writer.Serialize(stream, this);
             }
         }
+
+        public void ShellOpen()
+        {
+            System.Diagnostics.Process.Start(this.Filename);
+        }
     }
 }

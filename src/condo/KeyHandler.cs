@@ -1,6 +1,7 @@
 namespace condo
 {
     using ConsoleBuffer;
+    using System;
     using System.Text;
     using System.Windows.Input;
 
@@ -14,6 +15,9 @@ namespace condo
     sealed class KeyHandler
     {
         private readonly ConsoleWrapper console;
+        private bool IsCtrlModified { get => Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl); }
+
+        public event EventHandler<KeyboardShortcutEventArgs> KeyboardShortcut;
 
         public KeyHandler(ConsoleWrapper console)
         {
@@ -48,7 +52,7 @@ namespace condo
             switch (e.Key)
             {
             case Key.Up:
-                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                if (this.IsCtrlModified)
                 {
                     this.console.SendText(Encoding.UTF8.GetBytes("\x1b[1;5A"), false, true);
                 }
@@ -58,7 +62,7 @@ namespace condo
                 }
                 break;
             case Key.Down:
-                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                if (this.IsCtrlModified)
                 {
                     this.console.SendText(Encoding.UTF8.GetBytes("\x1b[1;5B"), false, true);
                 }
@@ -68,7 +72,7 @@ namespace condo
                 }
                 break;
             case Key.Right:
-                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                if (this.IsCtrlModified)
                 {
                     this.console.SendText(Encoding.UTF8.GetBytes("\x1b[1;5C"), false, true);
                 }
@@ -78,7 +82,7 @@ namespace condo
                 }
                 break;
             case Key.Left:
-                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                if (this.IsCtrlModified)
                 {
                     this.console.SendText(Encoding.UTF8.GetBytes("\x1b[1;5D"), false, true);
                 }
@@ -147,10 +151,21 @@ namespace condo
             case Key.F12:
                 this.console.SendText(Encoding.UTF8.GetBytes("\x1b[24~"), false, false);
                 break;
+            case Key.OemComma:
+                if (this.IsCtrlModified)
+                {
+                    this.OnKeyboardShortcut(new KeyboardShortcutEventArgs { Shortcut = condo.KeyboardShortcut.OpenConfig });
+                }
+                break;
             default:
                 e.Handled = false; // just kidding 🙃
                 break;
             }
+        }
+
+        private void OnKeyboardShortcut(KeyboardShortcutEventArgs args)
+        {
+            this.KeyboardShortcut?.Invoke(this, args);
         }
     }
 }

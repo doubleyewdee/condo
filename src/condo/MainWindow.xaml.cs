@@ -83,6 +83,7 @@ namespace condo
             this.configuration = Configuration.Load(Configuration.GetDefaultFilename());
             this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
+            this.keyHandler.KeyboardShortcut += this.HandleKeyboardShortcut;
 
 #if DEBUG
             // There is currently a ... behavior ... in VS where it hijacks console output from spawned child
@@ -155,6 +156,16 @@ namespace condo
 
             this.console?.Dispose();
             this.console = null;
+        }
+
+        private void HandleKeyboardShortcut(object sender, KeyboardShortcutEventArgs args)
+        {
+            switch (args.Shortcut)
+            {
+            case KeyboardShortcut.OpenConfig:
+                this.configuration.ShellOpen();
+                break;
+            }
         }
     }
 }

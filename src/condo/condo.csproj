@@ -65,6 +65,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Configuration.cs" />
+    <Compile Include="KeyboardShortcutEvent.cs" />
     <Compile Include="KeyHandler.cs" />
     <Compile Include="Screen.cs" />
     <Compile Include="SolidBrushCache.cs" />
