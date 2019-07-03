@@ -17,6 +17,7 @@ namespace condo
         private readonly XtermPalette mellowPalette;
         private ConsoleWrapper console;
         private KeyHandler keyHandler;
+        private Configuration configuration;
 
         private bool IsOSVersionSupported()
         {
@@ -79,6 +80,7 @@ namespace condo
             }
 
             this.InitializeWindowSizeHandling();
+            this.configuration = Configuration.Load(Configuration.GetDefaultFilename());
             this.console = TerminalManager.Instance.GetOrCreate(0, "wsl.exe");
             this.keyHandler = new KeyHandler(this.console);
 
