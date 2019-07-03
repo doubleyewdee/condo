@@ -1,7 +1,6 @@
 namespace condo
 {
     using System;
-    using System.IO;
     using System.Threading.Tasks;
     using System.Windows;
 
@@ -38,7 +37,7 @@ namespace condo
         private void Application_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
         {
             ConsoleBuffer.Logger.Verbose($"unhandled dispatcher exception {e.Exception}");
-            System.Windows.MessageBox.Show(e.Exception.ToString());
+            MessageBox.Show(e.Exception.ToString());
         }
     }
 }
