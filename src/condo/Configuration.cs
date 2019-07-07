@@ -16,10 +16,10 @@ namespace condo
         /// </summary>
         public EventHandler Changed;
 
-        [JsonProperty]
+        [JsonProperty(Order = 1)]
         public string FontFamily { get; set; } = "Consolas";
 
-        [JsonProperty]
+        [JsonProperty(Order = 2)]
         public int FontSize { get; set; } = 12;
 
         public string Filename { get; private set; }

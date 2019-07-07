@@ -2,12 +2,13 @@ namespace condo
 {
     using System;
     using System.Collections.Generic;
+    using System.Windows.Media;
     using ConsoleBuffer;
     using Newtonsoft.Json;
 
     sealed partial class Configuration
     {
-        sealed class ColorConverter : JsonConverter<List<Character.ColorInfo>>
+        sealed class PaletteConverter : JsonConverter<List<Character.ColorInfo>>
         {
             public override List<Character.ColorInfo> ReadJson(JsonReader reader, Type objectType, List<Character.ColorInfo> existingValue, bool hasExistingValue, JsonSerializer serializer)
             {
@@ -20,7 +21,7 @@ namespace condo
                 reader.Read();
                 while (reader.TokenType != JsonToken.EndArray)
                 {
-                    var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString((string)reader.Value);
+                    var color = (Color)ColorConverter.ConvertFromString((string)reader.Value);
                     palette.Add(new Character.ColorInfo { R = color.R, G = color.G, B = color.B });
                     if (!reader.Read())
                         throw new JsonException("Unexpected end of array");
@@ -31,18 +32,18 @@ namespace condo
 
             public override void WriteJson(JsonWriter writer, List<Character.ColorInfo> value, JsonSerializer serializer)
             {
-                var converter = new System.Windows.Media.ColorConverter();
+                var converter = new ColorConverter();
                 writer.WriteStartArray();
                 for (var i = 0; i < value.Count; ++i)
                 {
-                    var color = new System.Windows.Media.Color { R = value[i].R, G = value[i].G, B = value[i].B };
+                    var color = new Color { R = value[i].R, G = value[i].G, B = value[i].B };
                     writer.WriteValue(converter.ConvertToString(color));
                 }
                 writer.WriteEndArray();
             }
         }
 
-        [JsonProperty, JsonConverter(typeof(ColorConverter))]
+        [JsonProperty(Order = -1), JsonConverter(typeof(PaletteConverter))]
         public List<Character.ColorInfo> Palette { get; set; } = new List<Character.ColorInfo>
         {
             new Character.ColorInfo { R = 0x1d, G = 0x1f, B = 0x21 },
