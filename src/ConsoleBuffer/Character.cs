@@ -16,20 +16,6 @@ namespace ConsoleBuffer
             public byte G;
             public byte B;
 
-            public ColorInfo(string rgbValue)
-            {
-                this.R = this.G = this.B = 0;
-                if (rgbValue.Length != 7 || rgbValue[0] != '#')
-                {
-                    throw new ArgumentException(nameof(rgbValue));
-                }
-                for (var i = 1; i < 7; ++i)
-                {
-                    if (rgbValue[i] < '0' || rgbValue[i] > '9')
-                        throw new ArgumentException(nameof(rgbValue));
-                }
-            }
-
             public bool Equals(ColorInfo other)
             {
                 return (this.R == other.R && this.G == other.G && this.B == other.B);

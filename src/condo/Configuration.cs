@@ -5,7 +5,7 @@ namespace condo
     using Newtonsoft.Json;
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    sealed class Configuration : IDisposable
+    sealed partial class Configuration : IDisposable
     {
         private const string AppDataFolder = "condo";
         private const string SettingsFilename = "settings.json";

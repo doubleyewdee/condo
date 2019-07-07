@@ -64,6 +64,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ColorConfiguration.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="KeyboardShortcutEvent.cs" />
     <Compile Include="KeyHandler.cs" />

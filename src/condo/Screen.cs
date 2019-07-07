@@ -151,6 +151,13 @@ namespace condo
         public void SetConfiguration(Configuration configuration)
         {
             this.SetFontValues(configuration.FontSize, new Typeface(configuration.FontFamily)); // TODO: do something if we can't find the desired font.
+            var palette = new XtermPalette();
+            for (var i = 0; i < configuration.Palette.Count; ++i)
+            {
+                palette[i] = configuration.Palette[i];
+            }
+            this.Palette = palette;
+            this.shouldRedraw = 1;
         }
 
         private void OnBufferPropertyChanged(object sender, PropertyChangedEventArgs args)
