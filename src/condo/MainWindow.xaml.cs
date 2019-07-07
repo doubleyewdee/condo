@@ -14,7 +14,6 @@ namespace condo
     public partial class MainWindow : Window
     {
         private const int MinimumWindowsVersion = 17763;
-        private readonly XtermPalette mellowPalette;
         private ConsoleWrapper console;
         private KeyHandler keyHandler;
         private Configuration configuration;
