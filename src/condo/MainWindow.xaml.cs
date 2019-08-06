@@ -96,22 +96,7 @@ namespace condo
                 }
             };
 
-            this.console.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName == "Running" && this.console != null && this.console.Running == false)
-                {
-                    var msg = System.Text.Encoding.UTF8.GetBytes($"\r\n[process terminated with code {this.console.ProcessExitCode}, press <enter> to exit.]");
-                    this.screen?.Buffer.Append(msg, msg.Length);
-
-                    this.KeyDown += (keySender, keyArgs) =>
-                    {
-                        if (keyArgs.Key == System.Windows.Input.Key.Enter)
-                        {
-                            this.Close();
-                        }
-                    };
-                }
-            };
+            this.console.PropertyChanged += this.HandleConsoleClosed;
 
             this.Closing += this.HandleClosing;
         }
@@ -158,6 +143,30 @@ namespace condo
             {
                 currentConfig.Changed -= this.HandleConfigurationChanged;
                 currentConfig.Dispose();
+            }
+        }
+
+        private void HandleConsoleClosed(object sender, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName == "Running" && this.console != null && this.console.Running == false)
+            {
+                if (this.configuration.ShowProcessExitOnClose)
+                {
+                    var msg = System.Text.Encoding.UTF8.GetBytes($"\r\n[process terminated with code {this.console.ProcessExitCode}, press <enter> to exit.]");
+                    this.screen?.Buffer.Append(msg, msg.Length);
+
+                    this.KeyDown += (keySender, keyArgs) =>
+                    {
+                        if (keyArgs.Key == System.Windows.Input.Key.Enter)
+                        {
+                            this.Close();
+                        }
+                    };
+                }
+                else
+                {
+                    this.Dispatcher.Invoke(() => this.Close());
+                }
             }
         }
     }

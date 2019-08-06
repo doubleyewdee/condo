@@ -43,7 +43,7 @@ namespace condo
             }
         }
 
-        [JsonProperty(Order = -1), JsonConverter(typeof(PaletteConverter))]
+        [JsonProperty(Order = 1000), JsonConverter(typeof(PaletteConverter))]
         public List<Character.ColorInfo> Palette { get; set; } = new List<Character.ColorInfo>
         {
             new Character.ColorInfo { R = 0x1d, G = 0x1f, B = 0x21 },

@@ -22,6 +22,9 @@ namespace condo
         [JsonProperty(Order = 2)]
         public int FontSize { get; set; } = 12;
 
+        [JsonProperty(Order = 3)]
+        public bool ShowProcessExitOnClose { get; set; } = true;
+
         public string Filename { get; private set; }
 
         // We'll leak any exceptions related to invalid json.
