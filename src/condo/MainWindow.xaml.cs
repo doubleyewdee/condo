@@ -104,6 +104,9 @@ namespace condo
         private double windowFrameWidth, windowFrameHeight;
         private void InitializeWindowSizeHandling()
         {
+            // XXX: maybe want to force a redraw of buffer too idk yet
+            this.DpiChanged += (sender, args) => VisualTreeHelper.SetRootDpi(this, args.NewDpi);
+
             this.windowFrameWidth = this.ActualWidth - this.grid.ActualWidth;
             this.windowFrameHeight = this.ActualHeight - this.grid.ActualHeight;
 
