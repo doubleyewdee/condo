@@ -104,12 +104,20 @@ namespace ConsoleBuffer
                     var heightDiff = height - this.Height;
                     this.Width = (short)width;
                     this.Height = (short)height;
-                    while (this.lines.Size < this.Height)
+                    
+                    // XXX: this might be the right way to handle resizes, on the other hand... it might not 🤔🙃
+                    // the idea is if we got new lines we'll shove blanks in, whereas if we lost lines we actually want to
+                    // scroll down (effectively) for each line we lost.
+                    while (heightDiff > 0)
                     {
                         this.lines.PushBack(new Line());
+                        --heightDiff;
+                    }
+                    if (heightDiff < 0)
+                    {
+                        this.topVisibleLine += -heightDiff;
                     }
 
-                    this.topVisibleLine = Math.Max(0, this.topVisibleLine - heightDiff);
                     this.OnPropertyChanged(nameof(this.ViewDimensions));
                 }
             }
