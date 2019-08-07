@@ -67,12 +67,7 @@ namespace ConsoleBuffer
             {
                 if (args.PropertyName == nameof(this.Buffer.ViewDimensions))
                 {
-                    if ((this.Width, this.Height) != this.Buffer.ViewDimensions)
-                    {
-                        this.Width = this.Buffer.Width;
-                        this.Height = this.Buffer.Height;
-                        this.UpdateDimensions(this.Height, this.Width);
-                    }
+                    this.UpdateDimensions(this.Buffer.Height, this.Buffer.Width);
                 }
             };
 

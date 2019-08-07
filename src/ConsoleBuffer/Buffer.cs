@@ -43,7 +43,7 @@ namespace ConsoleBuffer
         public bool CursorBlink { get; private set; }
 
         private int topVisibleLine;
-        private int bottomVisibleLine;
+        private int bottomVisibleLine { get { return this.topVisibleLine + this.MaxCursorY; } }
 
         private int CurrentLine
         {
@@ -83,7 +83,6 @@ namespace ConsoleBuffer
                 this.lines.PushBack(new Line());
             }
             this.topVisibleLine = 0;
-            this.bottomVisibleLine = this.MaxCursorY;
         }
 
         public void SetDimensions(int width, int height)
@@ -102,21 +101,18 @@ namespace ConsoleBuffer
                 if (height != this.Height || width != this.Width)
                 {
                     var heightDiff = height - this.Height;
+                    Logger.Verbose($"start resize console buffer height diff {heightDiff}, height:{this.Height}, top:{this.topVisibleLine}, buffer lines:{this.lines.Size}");
                     this.Width = (short)width;
                     this.Height = (short)height;
-                    
+
                     // XXX: this might be the right way to handle resizes, on the other hand... it might not 🤔🙃
                     // the idea is if we got new lines we'll shove blanks in, whereas if we lost lines we actually want to
                     // scroll down (effectively) for each line we lost.
-                    while (heightDiff > 0)
-                    {
+                    this.topVisibleLine = Math.Max(0, this.topVisibleLine + -heightDiff);
+                    while (this.lines.Size <= this.bottomVisibleLine)
                         this.lines.PushBack(new Line());
-                        --heightDiff;
-                    }
-                    if (heightDiff < 0)
-                    {
-                        this.topVisibleLine += -heightDiff;
-                    }
+
+                    Logger.Verbose($"end resize console buffer height diff {heightDiff}, height:{this.Height}, top:{this.topVisibleLine}, buffer lines:{this.lines.Size}");
 
                     this.OnPropertyChanged(nameof(this.ViewDimensions));
                 }
@@ -230,6 +226,7 @@ namespace ConsoleBuffer
                 }
                 break;
             case Commands.ControlSequence csiCommand:
+                Logger.Verbose($"handling command {csiCommand}");
                 this.HandleControlSequence(csiCommand);
                 break;
             case Commands.Unsupported unsupported:
@@ -507,7 +504,6 @@ namespace ConsoleBuffer
                 else
                 {
                     ++this.topVisibleLine;
-                    ++this.bottomVisibleLine;
                     if (this.lines.Size <= this.bottomVisibleLine)
                     {
                         this.lines.PushBack(new Line());

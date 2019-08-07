@@ -235,10 +235,5 @@ namespace ConsoleBuffer.Commands
             this.BasicForegroundColor = DefaultForegroundColor;
             this.BasicBackgroundColor = DefaultBackgroundColor;
         }
-
-        public override string ToString()
-        {
-            return $"^[[{string.Join(";", this.Parameters)}m";
-        }
     }
 }
