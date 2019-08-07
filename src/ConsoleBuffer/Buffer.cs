@@ -42,16 +42,12 @@ namespace ConsoleBuffer
         /// </summary>
         public bool CursorBlink { get; private set; }
 
-        private int topVisibleLine;
-        private int bottomVisibleLine { get { return this.topVisibleLine + this.MaxCursorY; } }
-
-        private int CurrentLine
-        {
-            get
-            {
-                return this.topVisibleLine + this.cursorY;
-            }
-        }
+        // these three values help track the current offsets into the 'lines' collection for ease of reference in code below. Effectively we ensure
+        // that the lines collection is always at least as large as our stated height, and assume that our viewing area is always at the end of
+        // the buffer.
+        private int StartLine { get { return this.lines.Size - this.Height; } }
+        private int EndLine { get { return this.StartLine + this.MaxCursorY; } }
+        private int CurrentLine { get { return this.StartLine + this.cursorY; } }
 
         /// <summary>
         /// Width of the console in characters.
@@ -82,7 +78,6 @@ namespace ConsoleBuffer
             {
                 this.lines.PushBack(new Line());
             }
-            this.topVisibleLine = 0;
         }
 
         public void SetDimensions(int width, int height)
@@ -101,18 +96,17 @@ namespace ConsoleBuffer
                 if (height != this.Height || width != this.Width)
                 {
                     var heightDiff = height - this.Height;
-                    Logger.Verbose($"start resize console buffer height diff {heightDiff}, height:{this.Height}, top:{this.topVisibleLine}, buffer lines:{this.lines.Size}");
+                    Logger.Verbose($"start resize console buffer height diff {heightDiff}, height:{this.Height}, top:{this.StartLine}, buffer lines:{this.lines.Size}");
                     this.Width = (short)width;
                     this.Height = (short)height;
 
                     // XXX: this might be the right way to handle resizes, on the other hand... it might not 🤔🙃
-                    // the idea is if we got new lines we'll shove blanks in, whereas if we lost lines we actually want to
-                    // scroll down (effectively) for each line we lost.
-                    this.topVisibleLine = Math.Max(0, this.topVisibleLine + -heightDiff);
-                    while (this.lines.Size <= this.bottomVisibleLine)
+                    // the idea here is that for resizes where we had no data we'll shove new lines in at the bottom, otherwise a resize will effectively show more of the
+                    // buffer above where the previous visible line was.
+                    while (this.lines.Size <= this.Height)
                         this.lines.PushBack(new Line());
 
-                    Logger.Verbose($"end resize console buffer height diff {heightDiff}, height:{this.Height}, top:{this.topVisibleLine}, buffer lines:{this.lines.Size}");
+                    Logger.Verbose($"end resize console buffer height diff {heightDiff}, height:{this.Height}, top:{this.StartLine}, buffer lines:{this.lines.Size}");
 
                     this.OnPropertyChanged(nameof(this.ViewDimensions));
                 }
@@ -173,7 +167,7 @@ namespace ConsoleBuffer
             {
                 if (this.cursorY == this.MaxCursorY)
                 {
-                    this.ScrollDown();
+                    this.lines.PushBack(new Line());
                 }
                 else
                 {
@@ -261,9 +255,9 @@ namespace ConsoleBuffer
                 break;
             case Commands.ControlCharacter.ControlCode.FF: // NB: could clear screen with this if we were so inclined. apparently xterm treats this as LF though, let's emulate.
             case Commands.ControlCharacter.ControlCode.LF:
-                if (this.CurrentLine == this.bottomVisibleLine)
+                if (this.CurrentLine == this.EndLine)
                 {
-                    this.ScrollDown();
+                    this.lines.PushBack(new Line());
                 }
 
                 this.cursorY = (short)Math.Min(this.MaxCursorY, this.cursorY + 1);
@@ -341,7 +335,7 @@ namespace ConsoleBuffer
                 ++x;
                 if (x == this.Width)
                 {
-                    if (++y > this.bottomVisibleLine)
+                    if (++y > this.EndLine)
                     {
                         break;
                     }
@@ -356,16 +350,16 @@ namespace ConsoleBuffer
             switch (eid.Direction)
             {
             case Commands.EraseIn.Parameter.All:
-                startY = this.topVisibleLine;
-                endY = this.bottomVisibleLine;
+                startY = this.StartLine;
+                endY = this.EndLine;
                 break;
             case Commands.EraseIn.Parameter.Before:
-                startY = this.topVisibleLine;
+                startY = this.StartLine;
                 endY = this.CurrentLine;
                 break;
             case Commands.EraseIn.Parameter.After:
                 startY = this.CurrentLine;
-                endY = this.bottomVisibleLine;
+                endY = this.EndLine;
                 break;
             default:
                 return;
@@ -489,30 +483,6 @@ namespace ConsoleBuffer
         }
 
         /// <summary>
-        /// Scroll the visible buffer down, adding new lines if needed.
-        /// If we're at the bottom of the buffer we will replace lines from the top with new, blank lines.
-        /// </summary>
-        private void ScrollDown(int lines = 1)
-        {
-            while (lines > 0)
-            {
-                --lines;
-                if (this.bottomVisibleLine == this.lines.Capacity - 1)
-                {
-                    this.lines.PushBack(new Line()); // will force an old line from the buffer;
-                }
-                else
-                {
-                    ++this.topVisibleLine;
-                    if (this.lines.Size <= this.bottomVisibleLine)
-                    {
-                        this.lines.PushBack(new Line());
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Render the currently "on-screen" area character-by-character onto the specified target.
         /// </summary>
         /// <param name="target">target to render on to.</param>
@@ -535,9 +505,9 @@ namespace ConsoleBuffer
             lock (this.renderLock)
             {
                 startLine = Math.Max(0, startLine);
-                if (startLine > this.topVisibleLine)
+                if (startLine > this.StartLine)
                 {
-                    startLine = this.topVisibleLine;
+                    startLine = this.StartLine;
                 }
 
                 for (var y = 0; y < this.Height; ++y)
