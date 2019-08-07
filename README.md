@@ -14,6 +14,10 @@ but for a light overview:
 
 ## Dev notes
 
+Prequisites to build:
+- .NET Core 3 preview 7 (it's what is currently in use to build).
+- Visual Studio 2019 16.3 preview 1 (see above)
+
 Some cool sites I've found while putting this together.
 - VT codes doc: https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
 - xterm: http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
