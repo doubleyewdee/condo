@@ -1,6 +1,7 @@
 namespace condo
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
     using Newtonsoft.Json;
 
@@ -60,7 +61,7 @@ namespace condo
 
         public void ShellOpen()
         {
-            System.Diagnostics.Process.Start(this.Filename);
+            Process.Start(new ProcessStartInfo { FileName = this.Filename, UseShellExecute = true });
         }
 
         private void Save(string filename)
