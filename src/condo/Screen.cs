@@ -42,8 +42,8 @@ namespace condo
         private Typeface typeface;
         private GlyphTypeface glyphTypeface;
         private int fontSizeEm = 16;
+        private double fontSizeScaled;
         private Point baselineOrigin;
-        private Rect cellRectangle;
         private double underlineY;
         private double underlineHeight;
         private GuidelineSet cellGuidelines;
@@ -279,12 +279,13 @@ namespace condo
             {
                 throw new InvalidOperationException("Could not get desired font.");
             }
-            this.CellWidth = this.glyphTypeface.AdvanceWidths[0] * this.fontSizeEm;
-            this.CellHeight = this.glyphTypeface.Height * this.fontSizeEm;
-            this.baselineOrigin = new Point(0, this.glyphTypeface.Baseline * this.fontSizeEm);
-            this.underlineY = this.baselineOrigin.Y - this.glyphTypeface.UnderlinePosition * this.fontSizeEm;
+
+            this.fontSizeScaled = this.fontSizeEm * this.dpiInfo.PixelsPerDip;
+            this.CellWidth = this.glyphTypeface.AdvanceWidths[0] * this.fontSizeScaled;
+            this.CellHeight = this.glyphTypeface.Height * this.fontSizeScaled;
+            this.baselineOrigin = new Point(0, this.glyphTypeface.Baseline * this.fontSizeScaled);
+            this.underlineY = this.baselineOrigin.Y - this.glyphTypeface.UnderlinePosition * this.fontSizeScaled;
             this.underlineHeight = (this.CellHeight * this.glyphTypeface.UnderlineThickness);
-            this.cellRectangle = new Rect(new Size(this.CellWidth, this.CellHeight));
 
             this.Resize();
         }
@@ -492,12 +493,12 @@ namespace condo
                                 glyphIndex = 0;
                             }
                             glyphChars.Add(glyphIndex);
-                            advanceWidths.Add(this.glyphTypeface.AdvanceWidths[glyphIndex] * this.fontSizeEm);
+                            advanceWidths.Add(this.glyphTypeface.AdvanceWidths[glyphIndex] * this.fontSizeScaled);
                         }
 
                         if (!allEmpty)
                         {
-                            var gr = new GlyphRun(this.glyphTypeface, 0, false, this.fontSizeEm, (float)this.dpiInfo.PixelsPerDip, new List<ushort>(glyphChars),
+                            var gr = new GlyphRun(this.glyphTypeface, 0, false, this.fontSizeScaled, (float)this.dpiInfo.PixelsPerDip, new List<ushort>(glyphChars),
                                 glyphOrigin, new List<double>(advanceWidths), null, null, null, null, null, null);
 
                             dc.DrawGlyphRun(foregroundBrush, gr);
