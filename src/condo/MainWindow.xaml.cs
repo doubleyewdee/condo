@@ -62,18 +62,7 @@ namespace condo
             this.keyHandler = new KeyHandler(this.console);
             this.keyHandler.KeyboardShortcut += this.HandleKeyboardShortcut;
 
-#if DEBUG
-            // There is currently a ... behavior ... in VS where it hijacks console output from spawned child
-            // processes with no recourse to turn this off, so we don't want to bother with the console output
-            // above as we'll never get any (sucks). To work around this use ctrl+f5 to launch, in debug builds
-            // the debugger will attach above.
-            if (!System.Diagnostics.Debugger.IsAttached)
-#endif
             this.screen.Buffer = this.console.Buffer;
-
-#if DEBUG
-            System.Diagnostics.Debugger.Launch();
-#endif
 
             this.console.Buffer.PropertyChanged += (_, args) =>
             {
