@@ -7,6 +7,18 @@
         mc:Ignorable="d"
         SizeToContent="WidthAndHeight"
         Title="condo">
+    <Window.CommandBindings>
+
+        <CommandBinding Command="{x:Static local:MainWindow.CustomRoutedF10Event}" CanExecute="CanExecuteCustomF10Event" Executed="ExecutedCustomF10Event" />
+
+    </Window.CommandBindings>
+
+    <Window.InputBindings>
+
+        <KeyBinding Key="F10" Command="{x:Static local:MainWindow.CustomRoutedF10Event}" />
+
+    </Window.InputBindings>
+
     <Grid Name="grid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
