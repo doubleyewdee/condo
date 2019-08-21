@@ -4,6 +4,8 @@ namespace condo
     using System.ComponentModel;
     using System.Security;
     using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Input;
     using System.Windows.Media;
     using ConsoleBuffer;
     using Microsoft.Win32;
@@ -13,10 +15,41 @@ namespace condo
     /// </summary>
     public partial class MainWindow : Window
     {
+        public static RoutedCommand CustomRoutedF10Event = new RoutedCommand(); /**> Used to get F10 properly processed. Otherwise it is filtered by the WPF default usage (MainWindow Menu) */
         private const int MinimumWindowsVersion = 17763;
         private ConsoleWrapper console;
         private KeyHandler keyHandler;
         private Configuration configuration;
+
+        /// <summary>
+        /// Event handler to catch custom routed F10 event from MainWindow InputBindings and route it to OnKeyDown event handler we usually use
+        /// </summary>
+        /// <param name="sender">The Main Window</param>
+        /// <param name="e">Nobody cares</param>
+        private void ExecutedCustomF10Event(object sender, ExecutedRoutedEventArgs e)
+        {
+            /* F10 was pressed */
+            this.keyHandler.OnKeyDown(sender, new KeyEventArgs(Keyboard.PrimaryDevice, Keyboard.PrimaryDevice.ActiveSource, 0, Key.F10) { RoutedEvent = Keyboard.KeyDownEvent });
+        }
+
+        /// <summary>
+        /// CanExecuteCustomF10Event that only returns true if the source is a control.
+        /// </summary>
+        /// <param name="sender">Not used</param>
+        /// <param name="e">e.Source -> MainWindow -> Which is a control</param>
+        private void CanExecuteCustomF10Event(object sender, CanExecuteRoutedEventArgs e)
+        {
+            var target = e.Source as Control;
+
+            if (target != null)
+            {
+                e.CanExecute = true;
+            }
+            else
+            {
+                e.CanExecute = false;
+            }
+        }
 
         private bool IsOSVersionSupported()
         {
