@@ -18,7 +18,7 @@ namespace condo
 
         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
         {
-            ConsoleBuffer.Logger.Verbose($"unhandled task exception {e.Exception}");
+            ConsoleBuffer.Logger.Error($"unhandled task exception {e.Exception}");
             this.Dispatcher.InvokeAsync(() =>
             {
                 throw e.Exception;
@@ -27,7 +27,7 @@ namespace condo
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            ConsoleBuffer.Logger.Verbose($"unhandled process exception {e.ExceptionObject}");
+            ConsoleBuffer.Logger.Error($"unhandled process exception {e.ExceptionObject}");
             this.Dispatcher.InvokeAsync(() =>
             {
                 throw e.ExceptionObject as Exception;
@@ -36,7 +36,7 @@ namespace condo
 
         private void Application_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
         {
-            ConsoleBuffer.Logger.Verbose($"unhandled dispatcher exception {e.Exception}");
+            ConsoleBuffer.Logger.Error($"unhandled dispatcher exception {e.Exception}");
             MessageBox.Show(e.Exception.ToString());
         }
     }

@@ -143,7 +143,7 @@ namespace ConsoleBuffer
                         break;
                     case ParserAppendResult.Invalid:
                         // XXX: we should keep a trailing history of received bytes or something so we can actually log meaningful data.
-                        Logger.Verbose("Invalid command sequence in parser.");
+                        Logger.Warning($"Invalid command sequence in parser.");
                         break;
                     default:
                         throw new InvalidOperationException("unexpected parser result");
@@ -220,7 +220,7 @@ namespace ConsoleBuffer
                 }
                 break;
             case Commands.ControlSequence csiCommand:
-                Logger.Verbose($"handling command {csiCommand}");
+                Logger.Debug($"handling command {csiCommand}");
                 this.HandleControlSequence(csiCommand);
                 break;
             case Commands.Unsupported unsupported:
@@ -268,7 +268,7 @@ namespace ConsoleBuffer
                 break;
             default:
                 // XXX: should log the sequence.
-                Logger.Verbose("Encountered unsupported sequence.");
+                Logger.Warning($"Encountered unsupported sequence.");
                 break;
             }
         }

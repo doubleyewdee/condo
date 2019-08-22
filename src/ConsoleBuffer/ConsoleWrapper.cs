@@ -175,12 +175,12 @@ namespace ConsoleBuffer
                 if (ret != 0)
                 {
                     // XXX: do something smarter here.
-                    Logger.Verbose($"Wait for process termination failed: {ret}");
+                    Logger.Warning($"Wait for process termination failed: {ret}");
                     return;
                 }
                 if (!NativeMethods.GetExitCodeProcess(this.processInfo.hProcess, out var exitCode))
                 {
-                    Logger.Verbose($"Failed to get process exit code, errno={Marshal.GetLastWin32Error()}");
+                    Logger.Warning($"Failed to get process exit code, errno={Marshal.GetLastWin32Error()}");
                 }
 
                 this.ProcessExitCode = exitCode;
