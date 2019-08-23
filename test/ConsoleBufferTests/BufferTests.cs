@@ -2,9 +2,8 @@ namespace ConsoleBufferTests
 {
     using System;
     using ConsoleBuffer;
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
+    using Xunit;
 
-    [TestClass]
     public sealed class BufferTests
     {
         private const int DefaultColumns = 80;
@@ -20,20 +19,20 @@ namespace ConsoleBufferTests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void InitializeState()
         {
             var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
-            Assert.AreEqual(DefaultColumns, buffer.Width);
-            Assert.AreEqual(DefaultRows, buffer.Height);
-            Assert.AreEqual((0, 0), buffer.CursorPosition);
-            Assert.IsTrue(buffer.CursorVisible);
-            Assert.IsTrue(buffer.CursorBlink);
-            Assert.AreEqual(string.Empty, buffer.Title);
-            Assert.AreEqual(DefaultRows, buffer.BufferSize);
+            Assert.Equal(DefaultColumns, buffer.Width);
+            Assert.Equal(DefaultRows, buffer.Height);
+            Assert.Equal((0, 0), buffer.CursorPosition);
+            Assert.True(buffer.CursorVisible);
+            Assert.True(buffer.CursorBlink);
+            Assert.Equal(string.Empty, buffer.Title);
+            Assert.Equal(DefaultRows, buffer.BufferSize);
         }
 
-        [TestMethod]
+        [Fact]
         public void DefaultColors()
         {
             var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
@@ -43,14 +42,14 @@ namespace ConsoleBufferTests
             {
                 if (x == 0 && y == 0)
                 {
-                    Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, c.BasicForegroundColor);
-                    Assert.AreEqual(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, c.BasicBackgroundColor);
+                    Assert.Equal(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.White, c.BasicForegroundColor);
+                    Assert.Equal(ConsoleBuffer.Commands.SetGraphicsRendition.Colors.Black, c.BasicBackgroundColor);
                 }
             };
             buffer.Render(surface);
         }
 
-        [TestMethod]
+        [Fact]
         public void MaxBufferSize()
         {
             var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
@@ -58,13 +57,13 @@ namespace ConsoleBufferTests
             {
                 buffer.AppendString($"line {i}\r\n");
             }
-            Assert.AreEqual(short.MaxValue, buffer.BufferSize);
+            Assert.Equal(short.MaxValue, buffer.BufferSize);
 
             buffer.AppendString($"that's too much, man! -sarah lynn (1984 - 2016)\r\n");
-            Assert.AreEqual(short.MaxValue, buffer.BufferSize);
+            Assert.Equal(short.MaxValue, buffer.BufferSize);
         }
 
-        [TestMethod]
+        [Fact]
         public void BrightForegroundText()
         {
             var buffer = new ConsoleBuffer.Buffer(DefaultColumns, DefaultRows);
@@ -72,13 +71,13 @@ namespace ConsoleBufferTests
             var surface = new RenderTest();
             surface.OnChar = (c, x, y) =>
             {
-                if (c.Glyph == 'b') Assert.IsTrue(c.ForegroundBright);
-                if (c.Glyph == 'n') Assert.IsFalse(c.ForegroundBright);
+                if (c.Glyph == 'b') Assert.True(c.ForegroundBright);
+                if (c.Glyph == 'n') Assert.False(c.ForegroundBright);
             };
             buffer.Render(surface);
         }
 
-        [TestMethod]
+        [Fact]
         public void BasicColor()
         {
             var surface = new RenderTest();
@@ -99,10 +98,10 @@ namespace ConsoleBufferTests
                     surface.OnChar = (c, x, y) =>
                     {
                         if (c.Glyph != 'c') return;
-                        Assert.AreEqual(fg > 7, c.ForegroundBright);
-                        Assert.AreEqual(bg > 7, c.BackgroundBright);
-                        Assert.AreEqual((ConsoleBuffer.Commands.SetGraphicsRendition.Colors)(fg > 7 ? fg - 8 : fg), c.BasicForegroundColor);
-                        Assert.AreEqual((ConsoleBuffer.Commands.SetGraphicsRendition.Colors)(bg > 7 ? bg - 8 : bg), c.BasicBackgroundColor);
+                        Assert.Equal(fg > 7, c.ForegroundBright);
+                        Assert.Equal(bg > 7, c.BackgroundBright);
+                        Assert.Equal((ConsoleBuffer.Commands.SetGraphicsRendition.Colors)(fg > 7 ? fg - 8 : fg), c.BasicForegroundColor);
+                        Assert.Equal((ConsoleBuffer.Commands.SetGraphicsRendition.Colors)(bg > 7 ? bg - 8 : bg), c.BasicBackgroundColor);
                     };
 
                     buffer.Render(surface);
@@ -110,7 +109,7 @@ namespace ConsoleBufferTests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void XtermColorIndex()
         {
             var surface = new RenderTest();
@@ -122,8 +121,8 @@ namespace ConsoleBufferTests
                 surface.OnChar = (c, x, y) =>
                 {
                     if (c.Glyph != 'c') return;
-                    Assert.IsTrue(c.ForegroundXterm256);
-                    Assert.AreEqual(i, c.ForegroundXterm256Index);
+                    Assert.True(c.ForegroundXterm256);
+                    Assert.Equal(i, c.ForegroundXterm256Index);
                 };
                 buffer.Render(surface);
 
@@ -131,8 +130,8 @@ namespace ConsoleBufferTests
                 surface.OnChar = (c, x, y) =>
                 {
                     if (c.Glyph != 'c') return;
-                    Assert.IsTrue(c.BackgroundXterm256);
-                    Assert.AreEqual(i, c.BackgroundXterm256Index);
+                    Assert.True(c.BackgroundXterm256);
+                    Assert.Equal(i, c.BackgroundXterm256Index);
                 };
                 buffer.Render(surface);
             }
